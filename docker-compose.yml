@@ -1,0 +1,56 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: preppilot-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+
+  gateway:
+    build: ./gateway
+    container_name: preppilot-gateway
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./gateway/.env
+    depends_on:
+      - user-service
+      - topic-service
+      - ai-service
+
+  user-service:
+    build: ./user-service
+    container_name: preppilot-user-service
+    env_file:
+      - ./user-service/.env
+    depends_on:
+      - mongodb
+
+  topic-service:
+    build: ./topic-service
+    container_name: preppilot-topic-service
+    env_file:
+      - ./topic-service/.env
+    depends_on:
+      - mongodb
+
+  ai-service:
+    build: ./ai-service
+    container_name: preppilot-ai-service
+    env_file:
+      - ./ai-service/.env
+
+  frontend:
+    build: ./frontend
+    container_name: preppilot-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+
+volumes:
+  mongo_data:

@@ -1,0 +1,49 @@
+import axios from 'axios'
+import { store } from '../store'
+import { setCredentials, clearCredentials } from '../features/auth/authSlice'
+
+const api = axios.create({
+  baseURL: '/api/v1',
+  withCredentials: true, // send refresh token cookie automatically
+})
+
+// Attach JWT to every request
+api.interceptors.request.use((config) => {
+  const token = store.getState().auth.accessToken
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Silent refresh on 401
+let isRefreshing = false
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const original = error.config
+
+    if (error.response?.status === 401 && !original._retry && !isRefreshing) {
+      original._retry = true
+      isRefreshing = true
+
+      try {
+        const { data } = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true })
+        store.dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
+        original.headers.Authorization = `Bearer ${data.accessToken}`
+        return api(original)
+      } catch {
+        store.dispatch(clearCredentials())
+        window.location.href = '/login'
+        return Promise.reject(error)
+      } finally {
+        isRefreshing = false
+      }
+    }
+
+    return Promise.reject(error)
+  }
+)
+
+export default api

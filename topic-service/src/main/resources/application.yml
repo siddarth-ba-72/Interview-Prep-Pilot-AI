@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: topic-service
+  data:
+    mongodb:
+      uri: "${MONGODB_URI}"
+      database: topics_db
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+server:
+  port: 8082

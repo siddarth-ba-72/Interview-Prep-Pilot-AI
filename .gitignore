@@ -13,12 +13,12 @@ frontend/.env.local
 frontend/.env.*.local
 
 # .env.example files ARE tracked (safe templates with no real values)
-!.env.example
-!gateway/.env.example
-!user-service/.env.example
-!topic-service/.env.example
-!ai-service/.env.example
-!frontend/.env.example
+.env.example
+gateway/.env.example
+user-service/.env.example
+topic-service/.env.example
+ai-service/.env.example
+frontend/.env.example
 
 # Gradle
 .gradle/
