@@ -2,6 +2,7 @@ package com.preppilot.topicservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.preppilot.topicservice.dto.ChatDtos.ChatSessionResponse;
+import com.preppilot.topicservice.dto.ChatDtos.PagedMessagesResponse;
 import com.preppilot.topicservice.dto.ChatDtos.SendMessageRequest;
 import com.preppilot.topicservice.exception.ApiException;
 import com.preppilot.topicservice.service.ChatSessionService;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Map;
 
 @RestController
@@ -29,6 +31,15 @@ public class ChatController {
     public ResponseEntity<ChatSessionResponse> getOrCreate(@RequestHeader("X-User-Id") String userId,
                                                             @PathVariable String topicId) {
         return ResponseEntity.ok(chatSessionService.getOrCreate(userId, topicId));
+    }
+
+    @GetMapping("/messages")
+    public ResponseEntity<PagedMessagesResponse> getMessages(
+            @RequestHeader("X-User-Id") String userId,
+            @PathVariable String topicId,
+            @RequestParam(required = false) String before) {
+        Instant beforeInstant = before != null ? Instant.parse(before) : null;
+        return ResponseEntity.ok(chatSessionService.getMessages(userId, topicId, beforeInstant));
     }
 
     @PostMapping(value = "/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

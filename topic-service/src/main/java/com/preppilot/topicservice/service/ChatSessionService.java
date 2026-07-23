@@ -2,6 +2,7 @@ package com.preppilot.topicservice.service;
 
 import com.preppilot.topicservice.dto.ChatDtos.ChatSessionResponse;
 import com.preppilot.topicservice.dto.ChatDtos.MessageResponse;
+import com.preppilot.topicservice.dto.ChatDtos.PagedMessagesResponse;
 import com.preppilot.topicservice.exception.ChatSessionNotFoundException;
 import com.preppilot.topicservice.exception.TopicNotFoundException;
 import com.preppilot.topicservice.model.ChatSession;
@@ -9,18 +10,23 @@ import com.preppilot.topicservice.model.Message;
 import com.preppilot.topicservice.model.Topic;
 import com.preppilot.topicservice.repository.ChatSessionRepository;
 import com.preppilot.topicservice.repository.TopicRepository;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class ChatSessionService {
 
+    private static final int PAGE_SIZE = 20;
     private static final String MODE_CLARIFY = "CLARIFY";
     private static final String MODE_GENERATE_CONTENT = "GENERATE_CONTENT";
     private static final String MODE_FOLLOW_UP = "FOLLOW_UP";
@@ -28,19 +34,58 @@ public class ChatSessionService {
     private final ChatSessionRepository chatSessionRepository;
     private final TopicRepository topicRepository;
     private final AiClient aiClient;
+    private final MongoTemplate mongoTemplate;
 
     public ChatSessionService(ChatSessionRepository chatSessionRepository,
                                TopicRepository topicRepository,
-                               AiClient aiClient) {
+                               AiClient aiClient,
+                               MongoTemplate mongoTemplate) {
         this.chatSessionRepository = chatSessionRepository;
         this.topicRepository = topicRepository;
         this.aiClient = aiClient;
+        this.mongoTemplate = mongoTemplate;
     }
 
+    /** Returns the session with the most recent PAGE_SIZE messages. */
     public ChatSessionResponse getOrCreate(String userId, String topicId) {
         ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topicId)
                 .orElseGet(() -> createSession(userId, topicId));
-        return toResponse(session);
+        return toPagedResponse(session);
+    }
+
+    /**
+     * Returns PAGE_SIZE messages older than {@code before} (exclusive).
+     * Pass null to get the most recent page.
+     */
+    public PagedMessagesResponse getMessages(String userId, String topicId, Instant before) {
+        ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topicId)
+                .orElseThrow(() -> new ChatSessionNotFoundException(topicId));
+
+        List<Message> all = session.getMessages();
+        int total = all.size();
+
+        // Determine the end index (exclusive) — everything before the cursor
+        int endIndex = total;
+        if (before != null) {
+            for (int i = total - 1; i >= 0; i--) {
+                if (all.get(i).getTimestamp().isBefore(before)) {
+                    endIndex = i + 1;
+                    break;
+                }
+                // If no message is before the cursor, return empty
+                if (i == 0) endIndex = 0;
+            }
+        }
+
+        int startIndex = Math.max(0, endIndex - PAGE_SIZE);
+        List<Message> slice = all.subList(startIndex, endIndex);
+        boolean hasMore = startIndex > 0;
+
+        List<MessageResponse> messages = slice.stream()
+                .map(m -> new MessageResponse(m.getRole().name(), m.getContent(), m.getTimestamp()))
+                .toList();
+
+        return new PagedMessagesResponse(messages, hasMore);
     }
 
     private ChatSession createSession(String userId, String topicId) {
@@ -68,6 +113,7 @@ public class ChatSessionService {
         session.addMessage(new Message(Message.Role.USER, userContent, Instant.now()));
         chatSessionRepository.save(session);
 
+        // Pass full history to AI for context, not just the visible page
         List<AiClient.ChatMessagePayload> history = session.getMessages().stream()
                 .map(AiClient::toPayload)
                 .toList();
@@ -115,14 +161,20 @@ public class ChatSessionService {
         try {
             emitter.send(SseEmitter.event().data("[DONE]"));
         } catch (IOException ignored) {
-            // client disconnected; nothing to persist beyond what's already saved
         }
     }
 
-    private ChatSessionResponse toResponse(ChatSession session) {
-        List<MessageResponse> messages = session.getMessages().stream()
+    private ChatSessionResponse toPagedResponse(ChatSession session) {
+        List<Message> all = session.getMessages();
+        int total = all.size();
+        int startIndex = Math.max(0, total - PAGE_SIZE);
+        List<Message> slice = all.subList(startIndex, total);
+        boolean hasMore = startIndex > 0;
+
+        List<MessageResponse> messages = slice.stream()
                 .map(m -> new MessageResponse(m.getRole().name(), m.getContent(), m.getTimestamp()))
                 .toList();
-        return new ChatSessionResponse(session.getTopicId(), messages);
+        return new ChatSessionResponse(session.getTopicId(), messages, hasMore);
     }
 }
+

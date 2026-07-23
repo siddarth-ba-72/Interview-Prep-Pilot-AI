@@ -1,10 +1,13 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks'
-import { getChatSession } from '../api/chat'
+import { getChatSession, getOlderMessages } from '../api/chat'
 import { extractErrorMessage } from '../api/topics'
 import { streamChatMessage } from '../api/chatStream'
 import {
+  olderMessagesLoadFailed,
+  olderMessagesLoaded,
+  olderMessagesLoadingStarted,
   sessionLoadFailed,
   sessionLoaded,
   sessionLoading,
@@ -26,12 +29,20 @@ export default function LearnModePage() {
     if (!topicId) return
     dispatch(sessionLoading({ topicId }))
     getChatSession(topicId)
-      .then((data) => dispatch(sessionLoaded({ topicId, messages: data.messages })))
+      .then((data) => dispatch(sessionLoaded({ topicId, messages: data.messages, hasMore: data.hasMore })))
       .catch((error) =>
         dispatch(sessionLoadFailed({ topicId, error: extractErrorMessage(error, 'Could not load this chat.') }))
       )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId])
+
+  const handleLoadMore = useCallback(() => {
+    if (!topicId || !session?.hasMore || session.isLoadingMore || !session.oldestTimestamp) return
+    dispatch(olderMessagesLoadingStarted({ topicId }))
+    getOlderMessages(topicId, session.oldestTimestamp)
+      .then((data) => dispatch(olderMessagesLoaded({ topicId, messages: data.messages, hasMore: data.hasMore })))
+      .catch(() => dispatch(olderMessagesLoadFailed({ topicId })))
+  }, [topicId, session?.hasMore, session?.isLoadingMore, session?.oldestTimestamp, dispatch])
 
   async function handleSend(content: string) {
     if (!topicId) return
@@ -65,6 +76,9 @@ export default function LearnModePage() {
             messages={session.messages}
             streamingContent={session.streamingContent}
             isStreaming={session.status === 'streaming'}
+            hasMore={session.hasMore}
+            isLoadingMore={session.isLoadingMore}
+            onLoadMore={handleLoadMore}
           />
           {session.status === 'error' && session.error && <p className="error-text">{session.error}</p>}
           <MessageInput onSend={handleSend} disabled={session.status === 'streaming'} />

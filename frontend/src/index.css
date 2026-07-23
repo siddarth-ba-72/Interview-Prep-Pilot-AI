@@ -342,6 +342,14 @@ input:focus {
   font-style: italic;
 }
 
+.chat-loading-more,
+.chat-history-start {
+  text-align: center;
+  font-size: 0.8rem;
+  padding: 8px 0;
+  margin: 0;
+}
+
 .message-input-bar {
   display: flex;
   gap: 12px;

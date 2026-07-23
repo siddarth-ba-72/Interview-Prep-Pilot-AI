@@ -15,7 +15,13 @@ public class ChatDtos {
 
     public record ChatSessionResponse(
         String topicId,
-        List<MessageResponse> messages
+        List<MessageResponse> messages,
+        boolean hasMore
+    ) {}
+
+    public record PagedMessagesResponse(
+        List<MessageResponse> messages,
+        boolean hasMore
     ) {}
 
     public record SendMessageRequest(

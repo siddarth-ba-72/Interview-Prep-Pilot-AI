@@ -8,6 +8,9 @@ interface ChatSessionState {
   streamingContent: string
   status: ChatStatus
   error: string | null
+  hasMore: boolean
+  isLoadingMore: boolean
+  oldestTimestamp: string | null
 }
 
 interface ChatState {
@@ -20,7 +23,15 @@ const initialState: ChatState = {
 
 function ensureSession(state: ChatState, topicId: string): ChatSessionState {
   if (!state.sessionsByTopicId[topicId]) {
-    state.sessionsByTopicId[topicId] = { messages: [], streamingContent: '', status: 'loading', error: null }
+    state.sessionsByTopicId[topicId] = {
+      messages: [],
+      streamingContent: '',
+      status: 'loading',
+      error: null,
+      hasMore: false,
+      isLoadingMore: false,
+      oldestTimestamp: null,
+    }
   }
   return state.sessionsByTopicId[topicId]
 }
@@ -34,17 +45,34 @@ const chatSlice = createSlice({
       session.status = 'loading'
       session.error = null
     },
-    sessionLoaded(state, action: PayloadAction<{ topicId: string; messages: ChatMessage[] }>) {
+    sessionLoaded(state, action: PayloadAction<{ topicId: string; messages: ChatMessage[]; hasMore: boolean }>) {
       const session = ensureSession(state, action.payload.topicId)
       session.messages = action.payload.messages
       session.streamingContent = ''
       session.status = 'idle'
       session.error = null
+      session.hasMore = action.payload.hasMore
+      session.oldestTimestamp = action.payload.messages[0]?.timestamp ?? null
     },
     sessionLoadFailed(state, action: PayloadAction<{ topicId: string; error: string }>) {
       const session = ensureSession(state, action.payload.topicId)
       session.status = 'error'
       session.error = action.payload.error
+    },
+    olderMessagesLoadingStarted(state, action: PayloadAction<{ topicId: string }>) {
+      const session = ensureSession(state, action.payload.topicId)
+      session.isLoadingMore = true
+    },
+    olderMessagesLoaded(state, action: PayloadAction<{ topicId: string; messages: ChatMessage[]; hasMore: boolean }>) {
+      const session = ensureSession(state, action.payload.topicId)
+      session.messages = [...action.payload.messages, ...session.messages]
+      session.hasMore = action.payload.hasMore
+      session.isLoadingMore = false
+      session.oldestTimestamp = action.payload.messages[0]?.timestamp ?? session.oldestTimestamp
+    },
+    olderMessagesLoadFailed(state, action: PayloadAction<{ topicId: string }>) {
+      const session = ensureSession(state, action.payload.topicId)
+      session.isLoadingMore = false
     },
     userMessageAppended(state, action: PayloadAction<{ topicId: string; content: string }>) {
       const session = ensureSession(state, action.payload.topicId)
@@ -78,6 +106,9 @@ export const {
   sessionLoading,
   sessionLoaded,
   sessionLoadFailed,
+  olderMessagesLoadingStarted,
+  olderMessagesLoaded,
+  olderMessagesLoadFailed,
   userMessageAppended,
   tokenReceived,
   streamCompleted,
