@@ -40,20 +40,30 @@ export default function DashboardPage() {
     navigate('/login')
   }
 
+  const topicCount = topicsQuery.data?.length ?? 0
+
   return (
     <div className="dashboard-shell">
-      <header className="dashboard-header">
-        <div>
-          <h1>Welcome, {user?.displayName}!</h1>
-          <p className="muted-text">{user?.email}</p>
-        </div>
-        <button onClick={handleLogout} className="secondary-button dashboard-logout">
-          Logout
+      <header className="app-navbar">
+        <button className="brand" onClick={() => navigate('/dashboard')}>
+          <span className="brand-logo">P</span>
+          <span className="brand-name">PrepPilot</span>
         </button>
+        <div className="navbar-user-area">
+          <span className="navbar-user-name">{user?.displayName}</span>
+          <button onClick={handleLogout} className="logout-button">Sign out</button>
+        </div>
       </header>
 
-      <section className="card dashboard-card">
-        <h2>Your Topics</h2>
+      <div className="dashboard-hero-tagline">
+        <h1>Your Topics</h1>
+        <div className="stat-chip">
+          <span className="stat-number">{topicCount}</span>
+          <span className="stat-label">{topicCount === 1 ? 'Topic' : 'Topics'}</span>
+        </div>
+      </div>
+
+      <section className="dashboard-topics-section">
         <NewTopicForm
           onCreate={async (name) => {
             await createMutation.mutateAsync(name).catch(() => null)

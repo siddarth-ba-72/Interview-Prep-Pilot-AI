@@ -21,28 +21,32 @@ export default function TopicCard({ topic, onDelete, isDeleting }: TopicCardProp
     }
   }
 
+  const initial = topic.name.charAt(0).toUpperCase()
+
   return (
     <div className="topic-card">
-      <div className="topic-card-header">
-        <h3>{topic.name}</h3>
+      <div className="topic-card-top">
+        <div className="topic-avatar">{initial}</div>
         <button
           className="topic-delete-button"
           onClick={handleDeleteClick}
           onBlur={() => setConfirming(false)}
           disabled={isDeleting}
         >
-          {confirming ? 'Confirm delete?' : 'Delete'}
+          {confirming ? '✓ Confirm' : '✕'}
         </button>
       </div>
+      <h3 className="topic-card-name">{topic.name}</h3>
+      <p className="topic-card-date">{new Date(topic.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
       <div className="topic-card-modes">
-        <button className="mode-button" onClick={() => navigate(`/topics/${topic.id}/learn`)}>
+        <button className="mode-button mode-button-primary" onClick={() => navigate(`/topics/${topic.id}/learn`)}>
           Learn
         </button>
-        <button className="mode-button" disabled title="Coming in a future phase">
+        <button className="mode-button" disabled title="Coming soon">
           Test
         </button>
-        <button className="mode-button" disabled title="Coming in a future phase">
-          Mock Interview
+        <button className="mode-button" disabled title="Coming soon">
+          Mock
         </button>
       </div>
     </div>

@@ -1,8 +1,9 @@
 import { useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { getChatSession, getOlderMessages } from '../api/chat'
-import { extractErrorMessage } from '../api/topics'
+import { extractErrorMessage, listTopics } from '../api/topics'
 import { streamChatMessage } from '../api/chatStream'
 import {
   olderMessagesLoadFailed,
@@ -24,6 +25,8 @@ export default function LearnModePage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const session = useAppSelector((state) => (topicId ? state.chat.sessionsByTopicId[topicId] : undefined))
+  const topicsQuery = useQuery({ queryKey: ['topics'], queryFn: listTopics, staleTime: Infinity })
+  const topicName = topicsQuery.data?.find((t) => t.id === topicId)?.name
 
   useEffect(() => {
     if (!topicId) return
@@ -65,7 +68,10 @@ export default function LearnModePage() {
         <button className="secondary-button chat-back-button" onClick={() => navigate('/dashboard')}>
           ← Back
         </button>
-        <h1>Learn Mode</h1>
+        <div className="chat-header-text">
+          {topicName && <p className="chat-topic-name">{topicName}</p>}
+          <h1>Learn Mode</h1>
+        </div>
       </header>
 
       {!session || session.status === 'loading' ? (
