@@ -15,7 +15,7 @@ spring:
             scope:
               - email
               - profile
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: "${FRONTEND_ORIGIN}/login/oauth2/code/google"
 
 jwt:
   secret: "${JWT_SECRET}"

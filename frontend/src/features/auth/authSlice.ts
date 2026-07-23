@@ -15,7 +15,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   accessToken: null,
-  status: 'idle',
+  status: 'loading',
 }
 
 const authSlice = createSlice({
