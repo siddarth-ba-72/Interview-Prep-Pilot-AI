@@ -116,3 +116,255 @@ input:focus {
 .dashboard-card {
   text-align: left;
 }
+
+.error-text {
+  color: #dc2626;
+  font-size: 0.9rem;
+  margin: 4px 0 0;
+}
+
+.dashboard-shell {
+  min-height: 100vh;
+  padding: 32px 16px;
+  max-width: 960px;
+  margin: 0 auto;
+  display: grid;
+  gap: 24px;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.dashboard-logout {
+  width: auto;
+  padding: 0 20px;
+  margin-top: 0;
+}
+
+.dashboard-shell .card {
+  width: 100%;
+}
+
+.new-topic-form {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.new-topic-form input {
+  flex: 1;
+}
+
+.new-topic-form .primary-button {
+  width: auto;
+  padding: 0 24px;
+  margin-top: 0;
+  white-space: nowrap;
+}
+
+.topic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.topic-card {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 14px;
+  padding: 18px;
+  background: #fff;
+}
+
+.topic-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.topic-card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.topic-delete-button {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.topic-delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.topic-card-modes {
+  display: flex;
+  gap: 8px;
+}
+
+.mode-button {
+  flex: 1;
+  border-radius: 10px;
+  border: 1px solid #2563eb;
+  background: #fff;
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+.mode-button:disabled {
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.chat-shell {
+  min-height: 100vh;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.chat-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.chat-back-button {
+  width: auto;
+  padding: 0 16px;
+  margin-top: 0;
+  min-height: 38px;
+}
+
+.chat-history {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 50vh;
+  overflow-y: auto;
+  padding: 8px 4px;
+}
+
+.chat-message {
+  display: flex;
+  max-width: 80%;
+}
+
+.chat-message-ai {
+  justify-content: flex-start;
+  align-self: flex-start;
+}
+
+.chat-message-user {
+  justify-content: flex-end;
+  align-self: flex-end;
+}
+
+.chat-message-bubble {
+  padding: 12px 16px;
+  border-radius: 16px;
+  line-height: 1.5;
+}
+
+.chat-message-bubble p { margin: 0 0 0.5em; }
+.chat-message-bubble p:last-child { margin-bottom: 0; }
+.chat-message-bubble ul,
+.chat-message-bubble ol { margin: 0.25em 0 0.5em 1.25em; padding: 0; }
+.chat-message-bubble li { margin-bottom: 0.25em; }
+.chat-message-bubble code {
+  background: rgba(0,0,0,0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.88em;
+}
+.chat-message-bubble pre {
+  background: rgba(0,0,0,0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.chat-message-bubble pre code { background: none; padding: 0; }
+.chat-message-bubble h1,
+.chat-message-bubble h2,
+.chat-message-bubble h3 { margin: 0.5em 0 0.25em; font-weight: 600; }
+.chat-message-bubble strong { font-weight: 600; }
+.chat-message-bubble blockquote {
+  border-left: 3px solid rgba(0,0,0,0.2);
+  margin: 0.5em 0;
+  padding-left: 0.75em;
+  color: inherit;
+  opacity: 0.8;
+}
+
+.chat-message-ai .chat-message-bubble {
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-message-user .chat-message-bubble {
+  background: #2563eb;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.typing-indicator {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.message-input-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.message-input-bar textarea {
+  flex: 1;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  resize: none;
+}
+
+.message-input-bar textarea:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.18);
+  border-color: #2563eb;
+}
+
+.message-send-button {
+  width: auto;
+  padding: 0 24px;
+  margin-top: 0;
+  height: 46px;
+}

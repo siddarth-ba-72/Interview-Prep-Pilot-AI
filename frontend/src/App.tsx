@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
+import LearnModePage from './pages/LearnModePage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { accessToken, status } = useAppSelector((state) => state.auth)
@@ -26,6 +27,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/topics/:topicId/learn"
+          element={
+            <ProtectedRoute>
+              <LearnModePage />
             </ProtectedRoute>
           }
         />

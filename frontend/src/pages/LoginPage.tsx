@@ -55,7 +55,7 @@ export default function LoginPage() {
             Sign In
           </button>
         </form>
-        <a className="secondary-button" href="/api/v1/auth/google">
+        <a className="secondary-button" href="/oauth2/authorization/google">
           Sign in with Google
         </a>
         <p className="muted-text">

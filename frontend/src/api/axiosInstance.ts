@@ -24,7 +24,9 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config
 
-    if (error.response?.status === 401 && !original._retry && !isRefreshing) {
+    const isRefreshCall = original.url?.includes('/auth/refresh')
+
+    if (error.response?.status === 401 && !original._retry && !isRefreshing && !isRefreshCall) {
       original._retry = true
       isRefreshing = true
 
@@ -35,7 +37,9 @@ api.interceptors.response.use(
         return api(original)
       } catch {
         store.dispatch(clearCredentials())
-        window.location.href = '/login'
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
         return Promise.reject(error)
       } finally {
         isRefreshing = false
