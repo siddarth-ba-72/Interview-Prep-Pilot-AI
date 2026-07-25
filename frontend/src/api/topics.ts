@@ -4,6 +4,8 @@ export interface Topic {
   id: string
   name: string
   createdAt: string
+  testCount?: number
+  avgScore?: number | null
 }
 
 export async function listTopics(): Promise<Topic[]> {
@@ -13,6 +15,11 @@ export async function listTopics(): Promise<Topic[]> {
 
 export async function createTopic(name: string): Promise<Topic> {
   const { data } = await api.post<Topic>('/topics', { name })
+  return data
+}
+
+export async function getTopic(topicId: string): Promise<Topic> {
+  const { data } = await api.get<Topic>(`/topics/${topicId}`)
   return data
 }
 

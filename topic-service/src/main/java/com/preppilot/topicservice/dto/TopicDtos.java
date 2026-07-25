@@ -16,6 +16,8 @@ public class TopicDtos {
     public record TopicResponse(
         String id,
         String name,
-        Instant createdAt
+        Instant createdAt,
+        Integer testCount,
+        Double avgScore
     ) {}
 }

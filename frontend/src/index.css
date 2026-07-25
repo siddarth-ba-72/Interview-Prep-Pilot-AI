@@ -343,6 +343,18 @@ input:focus {
   color: #94a3b8;
 }
 
+.aggregate-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1e40af;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  border: 1px solid #7dd3fc;
+}
+
 .topic-delete-button {
   background: none;
   border: none;

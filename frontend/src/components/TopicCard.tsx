@@ -38,16 +38,29 @@ export default function TopicCard({ topic, onDelete, isDeleting }: TopicCardProp
       </div>
       <h3 className="topic-card-name">{topic.name}</h3>
       <p className="topic-card-date">{new Date(topic.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+      
+      {/* Aggregate Score Badge */}
+      {topic.avgScore !== null && topic.avgScore !== undefined && (
+        <div className="aggregate-badge">
+          Avg: {topic.avgScore.toFixed(1)}/60 ({topic.testCount} tests)
+        </div>
+      )}
+      
       <div className="topic-card-modes">
         <button className="mode-button mode-button-primary" onClick={() => navigate(`/topics/${topic.id}/learn`)}>
           Learn
         </button>
-        <button className="mode-button" disabled title="Coming soon">
+        <button className="mode-button mode-button-primary" onClick={() => navigate(`/topics/${topic.id}/test`)}>
           Test
         </button>
         <button className="mode-button" disabled title="Coming soon">
           Mock
         </button>
+        {topic.testCount !== undefined && topic.testCount > 0 && (
+          <button className="mode-button" onClick={() => navigate(`/topics/${topic.id}/tests`)}>
+            History
+          </button>
+        )}
       </div>
     </div>
   )

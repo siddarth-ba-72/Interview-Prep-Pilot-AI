@@ -14,6 +14,26 @@ def get_client() -> AsyncOpenAI:
     return _client
 
 
+def _strip_markdown_fences(text: str) -> str:
+    """Remove markdown code fences (```json ... ```) if present."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1]
+        if text.endswith("```"):
+            text = text.rsplit("```", 1)[0]
+    return text.strip()
+
+
+async def call_llm(messages: list[dict]) -> str:
+    """Call LLM and return full response text, stripping markdown code fences."""
+    client = get_client()
+    response = await client.chat.completions.create(
+        model=settings.llm_model,
+        messages=messages,
+    )
+    return _strip_markdown_fences(response.choices[0].message.content)
+
+
 async def stream_completion(messages: list[dict]) -> AsyncGenerator[str, None]:
     client = get_client()
     stream = await client.chat.completions.create(

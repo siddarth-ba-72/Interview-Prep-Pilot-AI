@@ -42,6 +42,12 @@ public class TopicService {
     }
 
     private TopicResponse toResponse(Topic topic) {
-        return new TopicResponse(topic.getId(), topic.getName(), topic.getCreatedAt());
+        return new TopicResponse(
+            topic.getId(),
+            topic.getName(),
+            topic.getCreatedAt(),
+            topic.getTestCount(),
+            topic.getAvgScore()
+        );
     }
 }

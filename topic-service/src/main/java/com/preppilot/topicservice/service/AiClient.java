@@ -2,6 +2,10 @@ package com.preppilot.topicservice.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.preppilot.topicservice.dto.TestDtos.GenerateTestQuestionsRequest;
+import com.preppilot.topicservice.dto.TestDtos.GenerateTestQuestionsResponse;
+import com.preppilot.topicservice.dto.TestDtos.EvaluateAnswersRequest;
+import com.preppilot.topicservice.dto.TestDtos.EvaluateAnswersResponse;
 import com.preppilot.topicservice.model.Message;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -70,5 +74,35 @@ public class AiClient {
                         sink.next(node.get("token").asText());
                     }
                 });
+    }
+
+    /** Generates test questions (MCQ and Subjective) for a topic. */
+    public GenerateTestQuestionsResponse generateTestQuestions(String topicName) {
+        GenerateTestQuestionsRequest body = new GenerateTestQuestionsRequest(topicName);
+
+        return aiWebClient.post()
+                .uri("/ai/test/generate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .onStatus(status -> !status.is2xxSuccessful(),
+                        response -> response.bodyToMono(String.class)
+                                .map(body2 -> new RuntimeException("AI Service returned " + response.statusCode())))
+                .bodyToMono(GenerateTestQuestionsResponse.class)
+                .block();
+    }
+
+    /** Evaluates test answers and provides per-question feedback. */
+    public EvaluateAnswersResponse evaluateAnswers(String topicName, EvaluateAnswersRequest request) {
+        return aiWebClient.post()
+                .uri("/ai/test/evaluate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(request)
+                .retrieve()
+                .onStatus(status -> !status.is2xxSuccessful(),
+                        response -> response.bodyToMono(String.class)
+                                .map(body -> new RuntimeException("AI Service returned " + response.statusCode())))
+                .bodyToMono(EvaluateAnswersResponse.class)
+                .block();
     }
 }

@@ -30,6 +30,61 @@ FOLLOW_UP_INSTRUCTION = (
 )
 
 
+# Test Mode Prompts
+TEST_GENERATION_SYSTEM_PROMPT = (
+    "You are an expert technical interviewer. Generate exactly 20 interview questions "
+    "for the topic: {topic_name}. "
+    "Structure: 10 multiple-choice questions (each with exactly 4 options and one clearly correct answer) "
+    "and 10 subjective/open-ended or code-completion questions with a model answer. "
+    "Vary difficulty (beginner/intermediate/advanced), vary sub-topics to make each test feel distinct, "
+    "and never repeat questions from previous tests. "
+    "MCQ distractors should be plausible (not obviously wrong). "
+    "For subjective questions, include a complete, correct reference answer (modelAnswer). "
+    "Return response in this EXACT JSON format (no markdown, no extra text):\n"
+    "{{\n"
+    '  "questions": [\n'
+    "    {{\n"
+    '      "questionId": "uuid-string",\n'
+    '      "section": "MCQ",\n'
+    '      "text": "question text",\n'
+    '      "options": ["option1", "option2", "option3", "option4"],\n'
+    '      "correctOption": "the correct option text",\n'
+    '      "modelAnswer": null\n'
+    "    }},\n"
+    "    {{\n"
+    '      "questionId": "uuid-string",\n'
+    '      "section": "SUBJECTIVE",\n'
+    '      "text": "question text or code task",\n'
+    '      "options": null,\n'
+    '      "correctOption": null,\n'
+    '      "modelAnswer": "complete reference answer or code solution"\n'
+    "    }}\n"
+    "  ]\n"
+    "}}"
+)
+
+TEST_EVALUATION_SYSTEM_PROMPT = (
+    "You are an expert technical interviewer evaluating a student's test answers. "
+    "For each question provided in the evaluation request, determine if the user's answer is correct (true/false), "
+    "provide concise 1-2 sentence feedback, and return overall topic strengths and weaknesses. "
+    "Be fair but rigorous; accept equivalent correct answers. "
+    "IMPORTANT: Return evaluations in the EXACT SAME ORDER as the questions were provided, "
+    "and include the exact same questionId for each evaluation. "
+    "Return response in this EXACT JSON format (no markdown, no extra text):\n"
+    "{\n"
+    '  "perQuestion": [\n'
+    "    {\n"
+    '      "questionId": "<use the exact questionId from the provided question>",\n'
+    '      "isCorrect": true/false,\n'
+    '      "evaluation": "brief feedback sentence(s)"\n'
+    "    }\n"
+    "  ],\n"
+    '  "strengths": ["strength1", "strength2"],\n'
+    '  "weaknesses": ["weakness1", "weakness2"]\n'
+    "}"
+)
+
+
 def build_messages(topic_name: str, mode: LearnMode, history: list[ChatMessage]) -> list[dict]:
     instruction = {
         LearnMode.CLARIFY: CLARIFY_INSTRUCTION,
@@ -43,3 +98,29 @@ def build_messages(topic_name: str, mode: LearnMode, history: list[ChatMessage])
         messages.append({"role": role, "content": message.content})
     messages.append({"role": "system", "content": instruction})
     return messages
+
+
+def build_test_generation_messages(topic_name: str) -> list[dict]:
+    """Build messages for test question generation."""
+    return [
+        {"role": "system", "content": TEST_GENERATION_SYSTEM_PROMPT.format(topic_name=topic_name)},
+        {"role": "user", "content": f"Generate 10 MCQ and 10 SUBJECTIVE questions for {topic_name}."}
+    ]
+
+
+def build_test_evaluation_messages(topic_name: str, answers: list[dict]) -> list[dict]:
+    """Build messages for test answer evaluation."""
+    answers_text = "\n".join([
+        f"QuestionId: {a.get('questionId', f'Q{i+1}')}\n"
+        f"Section: {a['section']}\n"
+        f"Question: {a['question']}\n"
+        f"  Correct: {a['correctAnswer']}\n"
+        f"  User: {a['userAnswer'] or 'Not answered'}\n"
+        for i, a in enumerate(answers)
+    ])
+    
+    return [
+        {"role": "system", "content": TEST_EVALUATION_SYSTEM_PROMPT},
+        {"role": "user", "content": f"Topic: {topic_name}\nEvaluate these answers:\n\n{answers_text}"}
+    ]
+
