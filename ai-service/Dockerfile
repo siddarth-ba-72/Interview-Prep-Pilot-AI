@@ -1,8 +1,7 @@
 FROM python:3.12-slim
 WORKDIR /app
 
-# Install dependencies from pyproject.toml (no dev extras)
-COPY pyproject.toml .
+COPY requirements.txt .
 RUN pip install --no-cache-dir .
 
 # Copy application source
