@@ -7,8 +7,8 @@ from logging.handlers import TimedRotatingFileHandler
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from routers.learn import router as learn_router
-from routers.test import router as test_router
+from app.routers.learn import router as learn_router
+from app.routers.test import router as test_router
 
 # ── File logging setup ──────────────────────────────────────────────────────
 _LOG_DIR = "/app/logs"

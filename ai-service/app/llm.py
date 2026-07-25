@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator
 
 from openai import AsyncOpenAI
 
-from config import settings
+from app.config import settings
 
 _client: AsyncOpenAI | None = None
 

@@ -1,6 +1,6 @@
 from fastapi import Header, HTTPException, status
 
-from config import settings
+from app.config import settings
 
 
 async def require_caller_identity(

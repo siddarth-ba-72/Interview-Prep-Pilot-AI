@@ -3,13 +3,13 @@ import uuid
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from schemas import (
+from app.schemas import (
     GenerateTestQuestionsRequest, GenerateTestQuestionsResponse, TestQuestion, Section,
     EvaluateAnswersRequest, EvaluateAnswersResponse, QuestionEvaluation
 )
-from prompts import build_test_generation_messages, build_test_evaluation_messages
-from llm import call_llm
-from auth import require_internal_api_key_or_user_id
+from app.prompts import build_test_generation_messages, build_test_evaluation_messages
+from app.llm import call_llm
+from app.auth import require_internal_api_key_or_user_id
 
 router = APIRouter(prefix="/ai/test", tags=["test"])
 

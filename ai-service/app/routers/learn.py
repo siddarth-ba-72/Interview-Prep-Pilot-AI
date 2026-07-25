@@ -4,10 +4,10 @@ import logging
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
-from auth import require_caller_identity
-from llm import stream_completion
-from prompts import build_messages
-from schemas import LearnStreamRequest
+from app.auth import require_caller_identity
+from app.llm import stream_completion
+from app.prompts import build_messages
+from app.schemas import LearnStreamRequest
 
 logger = logging.getLogger(__name__)
 
