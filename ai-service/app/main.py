@@ -41,7 +41,3 @@ app.include_router(test_router)
 @app.get("/health")
 def health():
     return JSONResponse(content={"status": "ok"})
-
-@app.get("/")
-def health():
-    return {"status": "ok"}
