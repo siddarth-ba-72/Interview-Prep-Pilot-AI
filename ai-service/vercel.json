@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "main.py": {
+      "excludeFiles": "{test/**,tests/**,*.md}"
+    }
+  }
+}
