@@ -11,7 +11,7 @@ from app.routers.learn import router as learn_router
 from app.routers.test import router as test_router
 
 # ── File logging setup ──────────────────────────────────────────────────────
-_LOG_DIR = "/app/logs"
+_LOG_DIR = "/tmp/logs"
 os.makedirs(_LOG_DIR, exist_ok=True)
 
 _handler = TimedRotatingFileHandler(
