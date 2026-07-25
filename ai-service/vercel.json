@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "Dockerfile.vercel": {
+      "runtime": "container"
+    }
+  }
+}
