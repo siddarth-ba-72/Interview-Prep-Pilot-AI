@@ -1,4 +1,4 @@
-from schemas import ChatMessage, LearnMode, Role
+from app.schemas import ChatMessage, LearnMode, Role
 
 SYSTEM_PROMPT = (
     "You are an expert technical interviewer and teacher helping a student prepare "
