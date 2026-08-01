@@ -11,30 +11,30 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
 
   gateway:
-    build: ./gateway
+    build: ./preppilot-backend/gateway
     container_name: preppilot-gateway
     ports:
       - "8080:8080"
     env_file:
-      - ./gateway/.env
+      - ./preppilot-backend/gateway/.env
     depends_on:
       - user-service
       - topic-service
       - ai-service
 
   user-service:
-    build: ./user-service
+    build: ./preppilot-backend/user-service
     container_name: preppilot-user-service
     env_file:
-      - ./user-service/.env
+      - ./preppilot-backend/user-service/.env
     depends_on:
       - mongodb
 
   topic-service:
-    build: ./topic-service
+    build: ./preppilot-backend/topic-service
     container_name: preppilot-topic-service
     env_file:
-      - ./topic-service/.env
+      - ./preppilot-backend/topic-service/.env
     depends_on:
       - mongodb
 
