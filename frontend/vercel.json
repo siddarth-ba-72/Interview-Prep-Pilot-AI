@@ -2,15 +2,15 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "https://<gateway>.onrender.com/api/v1/:path*"
+      "destination": "https://prep-pilot-gateway-service.onrender.com/api/v1/:path*"
     },
     {
       "source": "/oauth2/:path*",
-      "destination": "https://<gateway>.onrender.com/oauth2/:path*"
+      "destination": "https://prep-pilot-gateway-service.onrender.com/oauth2/:path*"
     },
     {
       "source": "/login/oauth2/:path*",
-      "destination": "https://<gateway>.onrender.com/login/oauth2/:path*"
+      "destination": "https://prep-pilot-gateway-service.onrender.com/login/oauth2/:path*"
     },
     {
       "source": "/(.*)",

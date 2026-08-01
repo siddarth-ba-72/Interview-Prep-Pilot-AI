@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import * as testAPI from '../api/tests'
 import * as topicAPI from '../api/topics'
+import type { RootState } from '../store'
 import {
   setTestGenerating,
   setTestSession,
@@ -25,7 +26,7 @@ export default function TestPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const testState = useAppSelector((state: any) => state.tests.activeSessionByTopicId[topicId])
+  const testState = useAppSelector((state: RootState) => state.tests.activeSessionByTopicId[topicId])
 
   // Load topic and initialize test on mount
   useEffect(() => {

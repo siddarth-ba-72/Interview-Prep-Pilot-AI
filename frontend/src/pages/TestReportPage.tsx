@@ -5,6 +5,7 @@ import { useAppSelector } from '../hooks'
 import * as testAPI from '../api/tests'
 import AppHeader from '../components/AppHeader'
 import PageContainer from '../components/PageContainer'
+import type { RootState } from '../store'
 
 export default function TestReportPage() {
   const navigate = useNavigate()
@@ -21,7 +22,7 @@ export default function TestReportPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Try to get report from Redux first, otherwise fetch
-  const reports = useAppSelector((state: any) => state.tests.reportsBySessionId)
+  const reports = useAppSelector((state: RootState) => state.tests.reportsBySessionId)
   const cachedReport = reports[testId]
 
   useEffect(() => {
