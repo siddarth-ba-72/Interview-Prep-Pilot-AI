@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":cache-service"))
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("me.paulschwarz:spring-dotenv:4.0.0")

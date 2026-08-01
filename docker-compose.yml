@@ -23,7 +23,9 @@ services:
       - ai-service
 
   user-service:
-    build: ./preppilot-backend/user-service
+    build:
+      context: ./preppilot-backend
+      dockerfile: user-service/Dockerfile
     container_name: preppilot-user-service
     env_file:
       - ./preppilot-backend/user-service/.env
@@ -31,7 +33,9 @@ services:
       - mongodb
 
   topic-service:
-    build: ./preppilot-backend/topic-service
+    build:
+      context: ./preppilot-backend
+      dockerfile: topic-service/Dockerfile
     container_name: preppilot-topic-service
     env_file:
       - ./preppilot-backend/topic-service/.env

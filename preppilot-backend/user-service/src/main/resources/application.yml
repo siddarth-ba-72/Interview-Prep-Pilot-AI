@@ -25,6 +25,13 @@ jwt:
 frontend:
   origin: ${prep-pilot.frontend-url}
 
+app:
+  caching:
+    regions:
+      users:
+        maximum-size: 100000
+        expire-after-write: 12h
+
 management:
   endpoints:
     web:
