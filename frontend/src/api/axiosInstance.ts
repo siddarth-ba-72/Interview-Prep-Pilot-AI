@@ -1,9 +1,10 @@
 import axios from 'axios'
 import { store } from '../store'
 import { setCredentials, clearCredentials } from '../features/auth/authSlice'
+import { getApiBaseUrl } from './config'
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: getApiBaseUrl(),
   withCredentials: true, // send refresh token cookie automatically
 })
 
@@ -31,7 +32,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const { data } = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true })
+        const { data } = await axios.post(`${getApiBaseUrl()}/auth/refresh`, {}, { withCredentials: true })
         store.dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
         original.headers.Authorization = `Bearer ${data.accessToken}`
         return api(original)

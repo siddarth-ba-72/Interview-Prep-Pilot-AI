@@ -17,8 +17,6 @@ services:
       - "8080:8080"
     env_file:
       - ./gateway/.env
-    volumes:
-      - ./logs/gateway:/app/logs
     depends_on:
       - user-service
       - topic-service
@@ -29,8 +27,6 @@ services:
     container_name: preppilot-user-service
     env_file:
       - ./user-service/.env
-    volumes:
-      - ./logs/user-service:/app/logs
     depends_on:
       - mongodb
 
@@ -39,8 +35,6 @@ services:
     container_name: preppilot-topic-service
     env_file:
       - ./topic-service/.env
-    volumes:
-      - ./logs/topic-service:/app/logs
     depends_on:
       - mongodb
 
@@ -49,8 +43,6 @@ services:
     container_name: preppilot-ai-service
     env_file:
       - ./ai-service/.env
-    volumes:
-      - ./logs/ai-service:/app/logs
 
   frontend:
     build: ./frontend
