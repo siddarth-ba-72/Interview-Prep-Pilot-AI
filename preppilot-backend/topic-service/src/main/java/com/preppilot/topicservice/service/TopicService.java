@@ -5,6 +5,8 @@ import com.preppilot.topicservice.exception.DuplicateTopicException;
 import com.preppilot.topicservice.exception.TopicNotFoundException;
 import com.preppilot.topicservice.model.Topic;
 import com.preppilot.topicservice.repository.TopicRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +22,7 @@ public class TopicService {
         this.chatSessionService = chatSessionService;
     }
 
+    @CacheEvict(value = "topics", key = "#userId")
     public TopicResponse create(String userId, String name) {
         if (topicRepository.existsByUserIdAndNameIgnoreCase(userId, name)) {
             throw new DuplicateTopicException(name);
@@ -28,12 +31,14 @@ public class TopicService {
         return toResponse(saved);
     }
 
+    @Cacheable(value = "topics", key = "#userId")
     public List<TopicResponse> list(String userId) {
         return topicRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    @CacheEvict(value = "topics", key = "#userId")
     public void delete(String userId, String topicId) {
         Topic topic = topicRepository.findByIdAndUserId(topicId, userId)
                 .orElseThrow(() -> new TopicNotFoundException(topicId));

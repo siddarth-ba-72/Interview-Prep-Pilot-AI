@@ -7,6 +7,13 @@ spring:
       database: topics_db
       auto-index-creation: true
 
+app:
+  caching:
+    regions:
+      topics:
+        maximum-size: 50000
+        expire-after-write: 12h
+
 management:
   endpoints:
     web:
