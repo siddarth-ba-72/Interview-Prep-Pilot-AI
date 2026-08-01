@@ -108,7 +108,7 @@ export default function TestHistoryPage() {
                     const pct = Math.max(0, Math.round((s.rawScore / 60) * 100))
                     return (
                       <tr key={s.sessionId} className="border-t border-border bg-surface transition-colors hover:bg-surface-hover">
-                        <td className="px-4 py-3.5 font-semibold text-muted">{sessions.length - index}</td>
+                        <td className="px-4 py-3.5 font-semibold text-muted">{s.attemptNumber ?? sessions.length - index}</td>
                         <td className="px-4 py-3.5">
                           <div className="font-medium text-fg">
                             {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -159,7 +159,7 @@ export default function TestHistoryPage() {
                     className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:bg-surface-hover"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted">Test #{sessions.length - index}</span>
+                      <span className="text-xs font-semibold text-muted">Test #{s.attemptNumber ?? sessions.length - index}</span>
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                           passed ? 'bg-success-subtle text-success-fg' : 'bg-danger-subtle text-danger-fg'

@@ -8,7 +8,9 @@ public class TestDtos {
     // Test Session DTOs
     public record TestSessionStartResponse(
         String sessionId,
-        List<TestQuestionResponse> questions
+        List<TestQuestionResponse> questions,
+        Integer attemptNumber,
+        Boolean basedOnPreviousAttempt
     ) {}
 
     public record TestQuestionResponse(
@@ -37,6 +39,8 @@ public class TestDtos {
         List<String> strengths,
         List<String> weaknesses,
         List<QuestionResultResponse> questionSummary,
+        Integer attemptNumber,
+        Boolean basedOnPreviousAttempt,
         Instant createdAt
     ) {}
 
@@ -54,12 +58,15 @@ public class TestDtos {
     public record TestSessionListItemResponse(
         String sessionId,
         Instant completedAt,
-        Integer rawScore
+        Integer rawScore,
+        Integer attemptNumber
     ) {}
 
     // AI Request/Response DTOs
     public record GenerateTestQuestionsRequest(
-        String topicName
+        String topicName,
+        List<String> strengths,   // nullable; from previous attempt's report
+        List<String> weaknesses   // nullable; from previous attempt's report
     ) {}
 
     public record GenerateTestQuestionsResponse(

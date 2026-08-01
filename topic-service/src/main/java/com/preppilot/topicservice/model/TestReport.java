@@ -39,6 +39,10 @@ public class TestReport {
 
     private List<QuestionResult> questionSummary;
 
+    private Integer attemptNumber;     // 1-based sequence of test attempts for this topic+user
+
+    private Boolean basedOnPreviousAttempt;  // true if question generation was biased by a prior report
+
     @CreatedDate
     private Instant createdAt;
 
@@ -92,6 +96,8 @@ public class TestReport {
     public List<String> getStrengths() { return strengths; }
     public List<String> getWeaknesses() { return weaknesses; }
     public List<QuestionResult> getQuestionSummary() { return questionSummary; }
+    public Integer getAttemptNumber() { return attemptNumber; }
+    public Boolean getBasedOnPreviousAttempt() { return basedOnPreviousAttempt; }
     public Instant getCreatedAt() { return createdAt; }
 
     // Setters
@@ -101,4 +107,6 @@ public class TestReport {
     public void setStrengths(List<String> strengths) { this.strengths = strengths; }
     public void setWeaknesses(List<String> weaknesses) { this.weaknesses = weaknesses; }
     public void setQuestionSummary(List<QuestionResult> questionSummary) { this.questionSummary = questionSummary; }
+    public void setAttemptNumber(Integer attemptNumber) { this.attemptNumber = attemptNumber; }
+    public void setBasedOnPreviousAttempt(Boolean basedOnPreviousAttempt) { this.basedOnPreviousAttempt = basedOnPreviousAttempt; }
 }

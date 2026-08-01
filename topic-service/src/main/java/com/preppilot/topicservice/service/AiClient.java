@@ -76,9 +76,11 @@ public class AiClient {
                 });
     }
 
-    /** Generates test questions (MCQ and Subjective) for a topic. */
-    public GenerateTestQuestionsResponse generateTestQuestions(String topicName) {
-        GenerateTestQuestionsRequest body = new GenerateTestQuestionsRequest(topicName);
+    /** Generates test questions (MCQ and Subjective) for a topic.
+     * If strengths/weaknesses from a previous attempt are provided, the AI will bias
+     * question selection toward the weak areas (with light spaced-repetition on strengths). */
+    public GenerateTestQuestionsResponse generateTestQuestions(String topicName, List<String> strengths, List<String> weaknesses) {
+        GenerateTestQuestionsRequest body = new GenerateTestQuestionsRequest(topicName, strengths, weaknesses);
 
         return aiWebClient.post()
                 .uri("/ai/test/generate")

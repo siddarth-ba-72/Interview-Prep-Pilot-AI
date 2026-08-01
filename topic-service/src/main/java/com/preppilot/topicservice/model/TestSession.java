@@ -28,6 +28,10 @@ public class TestSession {
 
     private Integer rawScore;  // null until COMPLETED; range -60 to +60
 
+    private Integer attemptNumber;  // 1-based sequence of test attempts for this topic+user
+
+    private Boolean basedOnPreviousAttempt;  // true if question generation was biased by prior weaknesses
+
     @CreatedDate
     private Instant createdAt;
 
@@ -98,6 +102,8 @@ public class TestSession {
     public List<Question> getQuestions() { return questions; }
     public List<Answer> getAnswers() { return answers; }
     public Integer getRawScore() { return rawScore; }
+    public Integer getAttemptNumber() { return attemptNumber; }
+    public Boolean getBasedOnPreviousAttempt() { return basedOnPreviousAttempt; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getCompletedAt() { return completedAt; }
 
@@ -106,5 +112,7 @@ public class TestSession {
     public void setQuestions(List<Question> questions) { this.questions = questions; }
     public void setAnswers(List<Answer> answers) { this.answers = answers; }
     public void setRawScore(Integer rawScore) { this.rawScore = rawScore; }
+    public void setAttemptNumber(Integer attemptNumber) { this.attemptNumber = attemptNumber; }
+    public void setBasedOnPreviousAttempt(Boolean basedOnPreviousAttempt) { this.basedOnPreviousAttempt = basedOnPreviousAttempt; }
     public void setCompletedAt(Instant completedAt) { this.completedAt = completedAt; }
 }

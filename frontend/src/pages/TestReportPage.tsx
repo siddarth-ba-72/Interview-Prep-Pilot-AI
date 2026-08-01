@@ -110,7 +110,17 @@ export default function TestReportPage() {
 
       <PageContainer maxWidth="max-w-4xl" className="flex flex-col gap-8">
         <section>
-          <h2 className="mb-3 text-lg font-bold text-fg">Score Summary</h2>
+          <div className="mb-3 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-fg">Score Summary</h2>
+            <span className="rounded-full bg-primary-subtle px-3 py-1 text-xs font-bold text-primary">
+              Attempt #{report.attemptNumber ?? 1}
+            </span>
+          </div>
+          {report.basedOnPreviousAttempt && (
+            <p className="mb-3 rounded-lg bg-warning-subtle px-3 py-2 text-xs font-semibold text-warning-fg">
+              This test was focused on reinforcing your weak areas from your previous attempt.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl border border-border bg-surface p-4 text-center">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Raw Score</h3>

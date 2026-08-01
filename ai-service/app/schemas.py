@@ -47,6 +47,8 @@ class TestQuestion(BaseModel):
 
 class GenerateTestQuestionsRequest(BaseModel):
     topic_name: str = Field(alias="topicName")
+    strengths: list[str] | None = Field(default=None)  # from previous attempt's report
+    weaknesses: list[str] | None = Field(default=None)  # from previous attempt's report
 
     model_config = {"populate_by_name": True}
 

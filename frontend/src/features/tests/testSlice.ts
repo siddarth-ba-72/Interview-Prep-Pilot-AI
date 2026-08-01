@@ -6,6 +6,8 @@ interface TestSessionState {
   status: 'idle' | 'generating' | 'in_progress' | 'submitting' | 'completed'
   questions: TestQuestion[]
   answers: { [questionId: string]: string | null }
+  attemptNumber: number | null
+  basedOnPreviousAttempt: boolean
 }
 
 interface TestsState {
@@ -38,6 +40,8 @@ const testSlice = createSlice({
           status: 'generating',
           questions: [],
           answers: {},
+          attemptNumber: null,
+          basedOnPreviousAttempt: false,
         }
       } else {
         state.activeSessionByTopicId[topicId].status = 'generating'
@@ -48,13 +52,17 @@ const testSlice = createSlice({
       topicId: string
       sessionId: string
       questions: TestQuestion[]
+      attemptNumber: number
+      basedOnPreviousAttempt: boolean
     }>) => {
-      const { topicId, sessionId, questions } = action.payload
+      const { topicId, sessionId, questions, attemptNumber, basedOnPreviousAttempt } = action.payload
       state.activeSessionByTopicId[topicId] = {
         sessionId,
         status: 'in_progress',
         questions,
         answers: {},
+        attemptNumber,
+        basedOnPreviousAttempt,
       }
     },
 

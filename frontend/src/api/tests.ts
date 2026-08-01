@@ -10,6 +10,8 @@ export interface TestQuestion {
 export interface TestSessionStartResponse {
   sessionId: string
   questions: TestQuestion[]
+  attemptNumber: number
+  basedOnPreviousAttempt: boolean
 }
 
 export interface SubmitAnswerRequest {
@@ -42,6 +44,8 @@ export interface TestReportResponse {
   strengths: string[]
   weaknesses: string[]
   questionSummary: QuestionResult[]
+  attemptNumber: number
+  basedOnPreviousAttempt: boolean
   createdAt: string
 }
 
@@ -49,6 +53,7 @@ export interface TestSessionListItem {
   sessionId: string
   completedAt: string
   rawScore: number
+  attemptNumber: number
 }
 
 // Test API functions

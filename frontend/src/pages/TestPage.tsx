@@ -54,6 +54,8 @@ export default function TestPage() {
             topicId,
             sessionId: response.sessionId,
             questions: response.questions,
+            attemptNumber: response.attemptNumber,
+            basedOnPreviousAttempt: response.basedOnPreviousAttempt,
           })
         )
       } catch (err) {
@@ -151,6 +153,16 @@ export default function TestPage() {
 
       <PageContainer maxWidth="max-w-3xl" className="flex flex-col gap-8">
         <div>
+          <div className="mb-2 flex items-center gap-2">
+            <span className="rounded-full bg-primary-subtle px-3 py-1 text-xs font-bold text-primary">
+              Attempt #{testState.attemptNumber ?? 1}
+            </span>
+            {testState.basedOnPreviousAttempt && (
+              <span className="rounded-full bg-warning-subtle px-3 py-1 text-xs font-semibold text-warning-fg">
+                Focused on your weak areas from last attempt
+              </span>
+            )}
+          </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-border">
             <div
               className="h-full rounded-full bg-primary transition-all duration-300"

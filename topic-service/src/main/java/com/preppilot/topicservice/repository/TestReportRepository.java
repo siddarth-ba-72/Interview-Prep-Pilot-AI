@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface TestReportRepository extends MongoRepository<TestReport, String> {
     Optional<TestReport> findByTestSessionId(String testSessionId);
     List<TestReport> findByTopicIdAndUserId(String topicId, String userId);
+    Optional<TestReport> findTopByTopicIdAndUserIdOrderByAttemptNumberDesc(String topicId, String userId);
 }

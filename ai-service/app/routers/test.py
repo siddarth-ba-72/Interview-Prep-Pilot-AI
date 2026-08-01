@@ -18,7 +18,7 @@ router = APIRouter(prefix="/ai/test", tags=["test"])
 async def generate_questions(request: GenerateTestQuestionsRequest, _=Depends(require_internal_api_key_or_user_id)):
     """Generate 20 test questions (10 MCQ + 10 SUBJECTIVE) for a topic."""
     try:
-        messages = build_test_generation_messages(request.topic_name)
+        messages = build_test_generation_messages(request.topic_name, request.strengths, request.weaknesses)
         response_text = await call_llm(messages)
         
         # Parse JSON response

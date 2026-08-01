@@ -45,14 +45,28 @@ public class TestService {
                 .findByTopicIdAndUserIdAndStatus(topicId, userId, TestSession.Status.IN_PROGRESS);
 
         if (existingSession.isPresent()) {
-            return toTestSessionStartResponse(existingSession.get());
+            return toTestSessionStartResponse(existingSession.get(), false);
         }
 
+        // Compute attempt number: count of all prior sessions (in-progress or completed) + 1
+        int attemptNumber = testSessionRepository.findByTopicIdAndUserId(topicId, userId).size() + 1;
+
+        // Look up the most recent completed report to bias question generation toward weak areas
+        Optional<TestReport> previousReport = testReportRepository
+                .findTopByTopicIdAndUserIdOrderByAttemptNumberDesc(topicId, userId);
+
+        List<String> strengths = previousReport.map(TestReport::getStrengths).orElse(null);
+        List<String> weaknesses = previousReport.map(TestReport::getWeaknesses).orElse(null);
+        boolean basedOnPreviousAttempt = previousReport.isPresent()
+                && weaknesses != null && !weaknesses.isEmpty();
+
         // Generate questions from AI
-        GenerateTestQuestionsResponse aiResponse = aiClient.generateTestQuestions(topic.getName());
+        GenerateTestQuestionsResponse aiResponse = aiClient.generateTestQuestions(topic.getName(), strengths, weaknesses);
 
         // Create and save test session with questions
         TestSession session = new TestSession(topicId, userId);
+        session.setAttemptNumber(attemptNumber);
+        session.setBasedOnPreviousAttempt(basedOnPreviousAttempt);
         List<TestSession.Question> questions = aiResponse.questions().stream()
                 .map(q -> new TestSession.Question(
                         q.questionId(),
@@ -67,7 +81,7 @@ public class TestService {
         session.setQuestions(questions);
         TestSession saved = testSessionRepository.save(session);
 
-        return toTestSessionStartResponse(saved);
+        return toTestSessionStartResponse(saved, basedOnPreviousAttempt);
     }
 
     /**
@@ -79,7 +93,7 @@ public class TestService {
                 .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topicId))
                 .orElseThrow(() -> new RuntimeException("Test not found"));
 
-        return toTestSessionStartResponse(session);
+        return toTestSessionStartResponse(session, false);
     }
 
     /**
@@ -177,6 +191,8 @@ public class TestService {
         report.setPassed(rawScore >= 36);
         report.setStrengths(aiEvaluation.strengths());
         report.setWeaknesses(aiEvaluation.weaknesses());
+        report.setAttemptNumber(session.getAttemptNumber());
+        report.setBasedOnPreviousAttempt(session.getBasedOnPreviousAttempt() != null && session.getBasedOnPreviousAttempt());
 
         // Build question summary
         List<TestReport.QuestionResult> questionResults = new ArrayList<>();
@@ -246,7 +262,8 @@ public class TestService {
                         testSessionRepository.findById(report.getTestSessionId())
                                 .map(TestSession::getCompletedAt)
                                 .orElse(null),
-                        report.getRawScore()
+                        report.getRawScore(),
+                        report.getAttemptNumber()
                 ))
                 .collect(Collectors.toList());
     }
@@ -262,7 +279,7 @@ public class TestService {
         }
     }
 
-    private TestSessionStartResponse toTestSessionStartResponse(TestSession session) {
+    private TestSessionStartResponse toTestSessionStartResponse(TestSession session, boolean basedOnPreviousAttempt) {
         List<TestQuestionResponse> questions = session.getQuestions().stream()
                 .map(q -> new TestQuestionResponse(
                         q.questionId,
@@ -272,7 +289,12 @@ public class TestService {
                 ))
                 .toList();
 
-        return new TestSessionStartResponse(session.getId(), questions);
+        return new TestSessionStartResponse(
+                session.getId(),
+                questions,
+                session.getAttemptNumber(),
+                session.getBasedOnPreviousAttempt() != null ? session.getBasedOnPreviousAttempt() : basedOnPreviousAttempt
+        );
     }
 
     private TestReportResponse toTestReportResponse(TestReport report) {
@@ -299,6 +321,8 @@ public class TestService {
                 report.getStrengths(),
                 report.getWeaknesses(),
                 questionResults,
+                report.getAttemptNumber(),
+                report.getBasedOnPreviousAttempt(),
                 report.getCreatedAt()
         );
     }

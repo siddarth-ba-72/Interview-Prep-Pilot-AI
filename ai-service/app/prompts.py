@@ -63,6 +63,33 @@ TEST_GENERATION_SYSTEM_PROMPT = (
     "}}"
 )
 
+# Used when a previous attempt's report shows one or more weak areas. Retest should
+# skew heavily toward reinforcing those weaknesses while still confirming retained strengths.
+RETEST_WEAKNESS_FOCUSED_INSTRUCTION = (
+    "This is a RE-TEST. The student previously took a test on {topic_name} and their report "
+    "showed these weak areas (topics/concepts they struggled with):\n"
+    "{weaknesses_list}\n\n"
+    "Their strong areas (topics they already answered well) were:\n"
+    "{strengths_list}\n\n"
+    "Decide the exact split yourself based on how many weak areas were identified, but follow these rules:\n"
+    "1. The MAJORITY of the 20 questions must reinforce the weak areas above. Reuse the same underlying "
+    "concepts/sub-topics as the weaknesses, but rephrase, change difficulty, or use different examples/code "
+    "so it is not a verbatim repeat of any earlier question - this is repetitive reinforcement, not duplication.\n"
+    "2. Include ONLY 1-2 questions total drawn from the strong areas above, as a light spaced-repetition "
+    "check-in to confirm the student still retains that knowledge. Do not spend more than 2 questions on strengths.\n"
+    "3. If there are very few weak areas listed, you may fill the remaining questions with new or adjacent "
+    "sub-topics within {topic_name} rather than over-repeating a single weak area.\n"
+    "4. Never repeat the exact same question text from a previous test."
+)
+
+# Used when the student had no weaknesses (a clean pass) or this is their first attempt.
+RETEST_FRESH_INSTRUCTION = (
+    "The student has no recorded weak areas from their most recent attempt at {topic_name} "
+    "(or this is their first attempt). Generate a completely fresh set of 20 questions covering "
+    "{topic_name} broadly - explore different sub-topics than a typical first test would, "
+    "or go deeper into advanced areas, so the retest still feels new and challenging."
+)
+
 TEST_EVALUATION_SYSTEM_PROMPT = (
     "You are an expert technical interviewer evaluating a student's test answers. "
     "For each question provided in the evaluation request, determine if the user's answer is correct (true/false), "
@@ -100,11 +127,39 @@ def build_messages(topic_name: str, mode: LearnMode, history: list[ChatMessage])
     return messages
 
 
-def build_test_generation_messages(topic_name: str) -> list[dict]:
-    """Build messages for test question generation."""
+def build_test_generation_messages(
+    topic_name: str,
+    strengths: list[str] | None = None,
+    weaknesses: list[str] | None = None,
+) -> list[dict]:
+    """Build messages for test question generation.
+
+    If `weaknesses` from a previous attempt are provided (non-empty), bias the generated
+    questions toward reinforcing those weak areas with only light spaced-repetition on
+    strengths. Otherwise (no previous attempt, or previous attempt had no weaknesses),
+    generate a fresh set of questions as usual.
+    """
+    system_content = TEST_GENERATION_SYSTEM_PROMPT.format(topic_name=topic_name)
+
+    if weaknesses:
+        weaknesses_list = "\n".join(f"- {w}" for w in weaknesses)
+        strengths_list = "\n".join(f"- {s}" for s in strengths) if strengths else "(none recorded)"
+        system_content += "\n\n" + RETEST_WEAKNESS_FOCUSED_INSTRUCTION.format(
+            topic_name=topic_name,
+            weaknesses_list=weaknesses_list,
+            strengths_list=strengths_list,
+        )
+        user_content = (
+            f"Generate 10 MCQ and 10 SUBJECTIVE questions for {topic_name}, "
+            f"focused mostly on reinforcing the weak areas listed above."
+        )
+    else:
+        system_content += "\n\n" + RETEST_FRESH_INSTRUCTION.format(topic_name=topic_name)
+        user_content = f"Generate 10 MCQ and 10 SUBJECTIVE questions for {topic_name}."
+
     return [
-        {"role": "system", "content": TEST_GENERATION_SYSTEM_PROMPT.format(topic_name=topic_name)},
-        {"role": "user", "content": f"Generate 10 MCQ and 10 SUBJECTIVE questions for {topic_name}."}
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": user_content}
     ]
 
 
