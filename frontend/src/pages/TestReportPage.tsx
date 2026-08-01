@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useAppSelector } from '../hooks'
 import * as testAPI from '../api/tests'
-import './TestReportPage.css'
+import AppHeader from '../components/AppHeader'
+import PageContainer from '../components/PageContainer'
 
 export default function TestReportPage() {
   const navigate = useNavigate()
   const params = useParams<{ topicId: string; testId: string }>()
   const topicId = params.topicId!
   const testId = params.testId!
-  
+
   const [report, setReport] = useState<testAPI.TestReportResponse | null>(null)
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
     MCQ: true,
@@ -55,185 +57,213 @@ export default function TestReportPage() {
   }
 
   if (loading) {
-    return <div className="report-page"><p>Loading report...</p></div>
+    return (
+      <div className="min-h-screen bg-bg">
+        <AppHeader onBack={() => navigate(`/topics/${topicId}/tests`)} subtitle="Test Report" />
+        <PageContainer maxWidth="max-w-4xl">
+          <p className="text-sm text-muted">Loading report...</p>
+        </PageContainer>
+      </div>
+    )
   }
 
   if (error) {
     return (
-      <div className="report-page error">
-        <p>{error}</p>
-        <button onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+      <div className="min-h-screen bg-bg">
+        <AppHeader onBack={() => navigate(`/topics/${topicId}/tests`)} subtitle="Test Report" />
+        <PageContainer maxWidth="max-w-4xl" className="flex flex-col items-start gap-4">
+          <p className="text-sm font-medium text-danger">{error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-fg hover:bg-primary-hover"
+          >
+            Back to Dashboard
+          </button>
+        </PageContainer>
       </div>
     )
   }
 
   if (!report) {
-    return <div className="report-page"><p>Report not found</p></div>
+    return (
+      <div className="min-h-screen bg-bg">
+        <AppHeader onBack={() => navigate(`/topics/${topicId}/tests`)} subtitle="Test Report" />
+        <PageContainer maxWidth="max-w-4xl">
+          <p className="text-sm text-muted">Report not found</p>
+        </PageContainer>
+      </div>
+    )
   }
 
   const mcqResults = report.questionSummary.filter((q: testAPI.QuestionResult) => q.section === 'MCQ')
   const subjectiveResults = report.questionSummary.filter((q: testAPI.QuestionResult) => q.section === 'SUBJECTIVE')
 
-  return (
-    <div className="report-page">
-      <div className="report-header">
-        <h1>Test Report</h1>
-        <button className="back-button" onClick={() => navigate(`/topics/${topicId}/tests`)}>← Test History</button>
-      </div>
+  const sections = [
+    { key: 'MCQ', label: 'Multiple Choice Questions', results: mcqResults, offset: 0 },
+    { key: 'SUBJECTIVE', label: 'Subjective / Code Completion', results: subjectiveResults, offset: mcqResults.length },
+  ]
 
-      <div className="report-content">
-        {/* Score Summary */}
-        <section className="score-summary">
-          <h2>Score Summary</h2>
-          <div className="summary-grid">
-            <div className="summary-item">
-              <h3>Raw Score</h3>
-              <p className="score-value">{report.rawScore} / {report.maxScore}</p>
+  return (
+    <div className="min-h-screen bg-bg">
+      <AppHeader onBack={() => navigate(`/topics/${topicId}/tests`)} title="Test Report" />
+
+      <PageContainer maxWidth="max-w-4xl" className="flex flex-col gap-8">
+        <section>
+          <h2 className="mb-3 text-lg font-bold text-fg">Score Summary</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-surface p-4 text-center">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Raw Score</h3>
+              <p className="mt-1 text-xl font-extrabold text-primary">
+                {report.rawScore} / {report.maxScore}
+              </p>
             </div>
-            <div className="summary-item">
-              <h3>Percentage</h3>
-              <p className="score-value">{((report.rawScore / report.maxScore) * 100).toFixed(1)}%</p>
+            <div className="rounded-2xl border border-border bg-surface p-4 text-center">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Percentage</h3>
+              <p className="mt-1 text-xl font-extrabold text-primary">
+                {((report.rawScore / report.maxScore) * 100).toFixed(1)}%
+              </p>
             </div>
-            <div className="summary-item">
-              <h3>Status</h3>
-              <p className={`status ${report.passed ? 'passed' : 'failed'}`}>
+            <div className="rounded-2xl border border-border bg-surface p-4 text-center">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Status</h3>
+              <p
+                className={`mt-1 text-sm font-extrabold ${
+                  report.passed ? 'text-success-fg' : 'text-danger-fg'
+                }`}
+              >
                 {report.passed ? 'PASSED' : 'FAILED'}
               </p>
             </div>
-            <div className="summary-item">
-              <h3>All-Time Average</h3>
-              <p className="score-value">
+            <div className="rounded-2xl border border-border bg-surface p-4 text-center">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">All-Time Average</h3>
+              <p className="mt-1 text-xl font-extrabold text-primary">
                 {report.avgScoreAtTime ? report.avgScoreAtTime.toFixed(1) : '—'} / {report.maxScore}
               </p>
             </div>
           </div>
         </section>
 
-        {/* Strengths & Weaknesses */}
-        <section className="strengths-weaknesses">
-          <div className="strength-section">
-            <h3>Strengths</h3>
-            <ul className="tag-list strengths">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <h3 className="mb-2 text-sm font-bold text-fg">Strengths</h3>
+            <ul className="flex flex-wrap gap-2">
               {report.strengths.map((strength: string, idx: number) => (
-                <li key={idx} className="tag strength-tag">{strength}</li>
+                <li key={idx} className="rounded-full bg-success-subtle px-3 py-1 text-xs font-semibold text-success-fg">
+                  {strength}
+                </li>
               ))}
             </ul>
           </div>
-          <div className="weakness-section">
-            <h3>Areas for Improvement</h3>
-            <ul className="tag-list weaknesses">
+          <div>
+            <h3 className="mb-2 text-sm font-bold text-fg">Areas for Improvement</h3>
+            <ul className="flex flex-wrap gap-2">
               {report.weaknesses.map((weakness: string, idx: number) => (
-                <li key={idx} className="tag weakness-tag">{weakness}</li>
+                <li key={idx} className="rounded-full bg-danger-subtle px-3 py-1 text-xs font-semibold text-danger-fg">
+                  {weakness}
+                </li>
               ))}
             </ul>
           </div>
         </section>
 
-        {/* Question Breakdown */}
-        <section className="question-breakdown">
-          <h2>Question Breakdown</h2>
+        <section>
+          <h2 className="mb-3 text-lg font-bold text-fg">Question Breakdown</h2>
+          <div className="flex flex-col gap-4">
+            {sections.map(
+              ({ key, label, results, offset }) =>
+                results.length > 0 && (
+                  <div key={key} className="overflow-hidden rounded-2xl border border-border bg-surface">
+                    <button
+                      onClick={() => toggleSection(key)}
+                      className="flex w-full items-center justify-between px-5 py-4 text-left"
+                    >
+                      <h3 className="text-sm font-bold text-fg">
+                        {label} ({results.length})
+                      </h3>
+                      {expandedSections[key] ? (
+                        <ChevronDown size={16} className="text-muted" />
+                      ) : (
+                        <ChevronRight size={16} className="text-muted" />
+                      )}
+                    </button>
 
-          {/* MCQ Section */}
-          {mcqResults.length > 0 && (
-            <div className="breakdown-section">
-              <div
-                className="section-header"
-                onClick={() => toggleSection('MCQ')}
-              >
-                <h3>Multiple Choice Questions ({mcqResults.length})</h3>
-                <span className="toggle-icon">{expandedSections.MCQ ? '▼' : '▶'}</span>
-              </div>
+                    {expandedSections[key] && (
+                      <div className="divide-y divide-border border-t border-border">
+                        {results.map((result: testAPI.QuestionResult, idx: number) => (
+                          <div
+                            key={result.questionId}
+                            className={`border-l-4 p-5 ${
+                              result.isCorrect ? 'border-success' : 'border-danger'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-bold text-fg">Question {idx + offset + 1}</h4>
+                              <span
+                                className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                                  result.isCorrect ? 'bg-success-subtle text-success-fg' : 'bg-danger-subtle text-danger-fg'
+                                }`}
+                              >
+                                {result.isCorrect ? `+${result.pointsAwarded}` : `${result.pointsAwarded}`}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-fg">{result.questionText}</p>
 
-              {expandedSections.MCQ && (
-                <div className="section-content">
-                  {mcqResults.map((result: testAPI.QuestionResult, idx: number) => (
-                    <div key={result.questionId} className={`question-result ${result.isCorrect ? 'correct' : 'incorrect'}`}>
-                      <div className="question-header">
-                        <h4>Question {idx + 1}</h4>
-                        <span className={`badge ${result.isCorrect ? 'correct-badge' : 'incorrect-badge'}`}>
-                          {result.isCorrect ? `+${result.pointsAwarded}` : `${result.pointsAwarded}`}
-                        </span>
-                      </div>
-                      <p className="question-text">{result.questionText}</p>
-                      <div className="answer-section">
-                        <div className="answer-item">
-                          <strong>Your Answer:</strong>
-                          <p className={result.isCorrect ? 'correct-answer' : 'incorrect-answer'}>
-                            {result.userAnswer || '(Not answered)'}
-                          </p>
-                        </div>
-                        <div className="answer-item">
-                          <strong>Correct Answer:</strong>
-                          <p className="correct-answer">{result.correctAnswer}</p>
-                        </div>
-                      </div>
-                      <p className="evaluation">{result.evaluation}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Your Answer</p>
+                                {key === 'SUBJECTIVE' ? (
+                                  <pre
+                                    className={`mt-1 whitespace-pre-wrap rounded-lg bg-bg p-3 font-mono text-xs ${
+                                      result.isCorrect ? 'text-success-fg' : 'text-danger-fg'
+                                    }`}
+                                  >
+                                    {result.userAnswer || '(Not answered)'}
+                                  </pre>
+                                ) : (
+                                  <p className={`mt-1 text-sm ${result.isCorrect ? 'text-success-fg' : 'text-danger-fg'}`}>
+                                    {result.userAnswer || '(Not answered)'}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                                  {key === 'SUBJECTIVE' ? 'Model Answer' : 'Correct Answer'}
+                                </p>
+                                {key === 'SUBJECTIVE' ? (
+                                  <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-bg p-3 font-mono text-xs text-success-fg">
+                                    {result.correctAnswer}
+                                  </pre>
+                                ) : (
+                                  <p className="mt-1 text-sm text-success-fg">{result.correctAnswer}</p>
+                                )}
+                              </div>
+                            </div>
 
-          {/* Subjective Section */}
-          {subjectiveResults.length > 0 && (
-            <div className="breakdown-section">
-              <div
-                className="section-header"
-                onClick={() => toggleSection('SUBJECTIVE')}
-              >
-                <h3>Subjective / Code Completion ({subjectiveResults.length})</h3>
-                <span className="toggle-icon">{expandedSections.SUBJECTIVE ? '▼' : '▶'}</span>
-              </div>
-
-              {expandedSections.SUBJECTIVE && (
-                <div className="section-content">
-                  {subjectiveResults.map((result: testAPI.QuestionResult, idx: number) => (
-                    <div key={result.questionId} className={`question-result ${result.isCorrect ? 'correct' : 'incorrect'}`}>
-                      <div className="question-header">
-                        <h4>Question {idx + mcqResults.length + 1}</h4>
-                        <span className={`badge ${result.isCorrect ? 'correct-badge' : 'incorrect-badge'}`}>
-                          {result.isCorrect ? `+${result.pointsAwarded}` : `${result.pointsAwarded}`}
-                        </span>
+                            <p className="mt-3 text-sm italic text-muted">{result.evaluation}</p>
+                          </div>
+                        ))}
                       </div>
-                      <p className="question-text">{result.questionText}</p>
-                      <div className="answer-section">
-                        <div className="answer-item">
-                          <strong>Your Answer:</strong>
-                          <pre className={result.isCorrect ? 'code-block correct-answer' : 'code-block incorrect-answer'}>
-                            {result.userAnswer || '(Not answered)'}
-                          </pre>
-                        </div>
-                        <div className="answer-item">
-                          <strong>Model Answer:</strong>
-                          <pre className="code-block correct-answer">{result.correctAnswer}</pre>
-                        </div>
-                      </div>
-                      <p className="evaluation">{result.evaluation}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    )}
+                  </div>
+                )
+            )}
+          </div>
         </section>
 
-        {/* Action Buttons */}
-        <div className="report-actions">
+        <div className="flex flex-col-reverse gap-3 pb-4 sm:flex-row sm:justify-end">
           <button
-            className="button-primary"
-            onClick={() => navigate(`/topics/${topicId}/learn`)}
-          >
-            Revisit Learn Mode
-          </button>
-          <button
-            className="button-secondary"
             onClick={() => navigate('/dashboard')}
+            className="rounded-lg border border-border px-5 py-2.5 text-sm font-bold text-fg transition-colors hover:bg-surface-hover"
           >
             Back to Dashboard
           </button>
+          <button
+            onClick={() => navigate(`/topics/${topicId}/learn`)}
+            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover"
+          >
+            Revisit Learn Mode
+          </button>
         </div>
-      </div>
+      </PageContainer>
     </div>
   )
 }

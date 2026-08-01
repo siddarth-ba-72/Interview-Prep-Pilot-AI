@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAppDispatch } from '../hooks'
 import { setCredentials } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
+import AuthShell from '../components/AuthShell'
 
 /**
  * After Google OAuth, the backend redirects here with the access token
@@ -38,10 +39,11 @@ export default function OAuthCallbackPage() {
   }, [dispatch, navigate])
 
   return (
-    <div className="page-shell">
-      <div className="card auth-card">
-        <p>Signing you in...</p>
+    <AuthShell title="Signing you in...">
+      <div className="flex items-center gap-3 text-sm text-muted">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />
+        Verifying your Google account
       </div>
-    </div>
+    </AuthShell>
   )
 }

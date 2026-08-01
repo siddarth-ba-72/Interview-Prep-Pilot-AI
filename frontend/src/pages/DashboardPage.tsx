@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom'
 import { createTopic, deleteTopic, extractErrorMessage, listTopics } from '../api/topics'
 import NewTopicForm from '../components/NewTopicForm'
 import TopicList from '../components/TopicList'
+import AppHeader from '../components/AppHeader'
+import PageContainer from '../components/PageContainer'
 
 export default function DashboardPage() {
   const user = useAppSelector((state) => state.auth.user)
@@ -43,27 +45,23 @@ export default function DashboardPage() {
   const topicCount = topicsQuery.data?.length ?? 0
 
   return (
-    <div className="dashboard-shell">
-      <header className="app-navbar">
-        <button className="brand" onClick={() => navigate('/dashboard')}>
-          <span className="brand-logo">P</span>
-          <span className="brand-name">PrepPilot</span>
-        </button>
-        <div className="navbar-user-area">
-          <span className="navbar-user-name">{user?.displayName}</span>
-          <button onClick={handleLogout} className="logout-button">Sign out</button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-bg">
+      <AppHeader userName={user?.displayName} onLogout={handleLogout} />
 
-      <div className="dashboard-hero-tagline">
-        <h1>Your Topics</h1>
-        <div className="stat-chip">
-          <span className="stat-number">{topicCount}</span>
-          <span className="stat-label">{topicCount === 1 ? 'Topic' : 'Topics'}</span>
+      <PageContainer className="flex flex-col gap-7">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">Your Topics</h1>
+            <p className="mt-1 text-sm text-muted">Create a topic, then learn, test, or mock-interview yourself on it.</p>
+          </div>
+          <div className="flex min-w-16 flex-col items-center rounded-xl border border-primary/20 bg-primary-subtle px-4 py-2">
+            <span className="text-xl font-extrabold leading-none text-primary">{topicCount}</span>
+            <span className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              {topicCount === 1 ? 'Topic' : 'Topics'}
+            </span>
+          </div>
         </div>
-      </div>
 
-      <section className="dashboard-topics-section">
         <NewTopicForm
           onCreate={async (name) => {
             await createMutation.mutateAsync(name).catch(() => null)
@@ -72,12 +70,12 @@ export default function DashboardPage() {
           error={createError}
         />
 
-        {topicsQuery.isLoading && <p className="muted-text">Loading topics...</p>}
-        {topicsQuery.isError && <p className="error-text">Could not load topics.</p>}
+        {topicsQuery.isLoading && <p className="text-sm text-muted">Loading topics...</p>}
+        {topicsQuery.isError && <p className="text-sm font-medium text-danger">Could not load topics.</p>}
         {topicsQuery.data && (
           <TopicList topics={topicsQuery.data} onDelete={(id) => deleteMutation.mutate(id)} deletingId={deletingId} />
         )}
-      </section>
+      </PageContainer>
     </div>
   )
 }

@@ -12,7 +12,8 @@ import {
   openResultsModal,
 } from '../features/tests/testSlice'
 import ResultsModal from '../components/ResultsModal'
-import './TestPage.css'
+import AppHeader from '../components/AppHeader'
+import PageContainer from '../components/PageContainer'
 
 export default function TestPage() {
   const navigate = useNavigate()
@@ -33,7 +34,7 @@ export default function TestPage() {
       setLoading(false)
       return
     }
-    
+
     async function loadTopicAndTest() {
       try {
         const topics = await topicAPI.listTopics()
@@ -71,9 +72,9 @@ export default function TestPage() {
   const handleSubmit = async () => {
     if (!testState) return
 
-    const unansweredCount = testState.questions.length - 
+    const unansweredCount = testState.questions.length -
       Object.values(testState.answers).filter((a) => a !== null).length
-    
+
     if (unansweredCount > 0) {
       if (!confirm(`${unansweredCount} of ${testState.questions.length} questions unanswered. Submit anyway?`)) {
         return
@@ -82,7 +83,7 @@ export default function TestPage() {
 
     try {
       dispatch(setTestSubmitting({ topicId }))
-      
+
       const answers: testAPI.SubmitAnswerRequest[] = testState.questions.map((q: testAPI.TestQuestion) => ({
         questionId: q.questionId,
         userAnswer: testState.answers[q.questionId] || null,
@@ -100,96 +101,136 @@ export default function TestPage() {
   }
 
   if (loading) {
-    return <div className="test-page"><p>Generating test...</p></div>
+    return (
+      <div className="min-h-screen bg-bg">
+        <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test Mode" />
+        <PageContainer maxWidth="max-w-3xl">
+          <p className="text-sm text-muted">Generating test...</p>
+        </PageContainer>
+      </div>
+    )
   }
 
   if (error) {
     return (
-      <div className="test-page error">
-        <p>{error}</p>
-        <button onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+      <div className="min-h-screen bg-bg">
+        <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test Mode" />
+        <PageContainer maxWidth="max-w-3xl" className="flex flex-col items-start gap-4">
+          <p className="text-sm font-medium text-danger">{error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-fg hover:bg-primary-hover"
+          >
+            Back to Dashboard
+          </button>
+        </PageContainer>
       </div>
     )
   }
 
   if (!testState || !topic) {
-    return <div className="test-page"><p>Loading...</p></div>
+    return (
+      <div className="min-h-screen bg-bg">
+        <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test Mode" />
+        <PageContainer maxWidth="max-w-3xl">
+          <p className="text-sm text-muted">Loading...</p>
+        </PageContainer>
+      </div>
+    )
   }
 
   const mcqQuestions = testState.questions.filter((q: testAPI.TestQuestion) => q.section === 'MCQ')
   const subjectiveQuestions = testState.questions.filter((q: testAPI.TestQuestion) => q.section === 'SUBJECTIVE')
   const answeredCount = Object.values(testState.answers).filter((a) => a !== null).length
+  const isSubmitting = testState.status === 'submitting'
 
   return (
-    <div className="test-page">
-      <div className="test-header">
-        <h1>{topic.name}</h1>
-        <p>Test Mode</p>
-      </div>
+    <div className="min-h-screen bg-bg">
+      <AppHeader onBack={() => navigate('/dashboard')} title={topic.name} subtitle="Test Mode" />
 
-      <div className="test-content">
-        <div className="test-progress-bar">
-          <div className="progress-fill" style={{ width: `${(answeredCount / testState.questions.length) * 100}%` }}></div>
+      <PageContainer maxWidth="max-w-3xl" className="flex flex-col gap-8">
+        <div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-border">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{ width: `${(answeredCount / testState.questions.length) * 100}%` }}
+            />
+          </div>
+          <p className="mt-2 text-sm text-muted">
+            {answeredCount} of {testState.questions.length} questions answered
+          </p>
         </div>
-        <p className="progress-text">{answeredCount} of {testState.questions.length} questions answered</p>
 
-        {/* MCQ Section */}
-        <section className="test-section">
-          <h2>Multiple Choice Questions (10 questions)</h2>
+        <section className="flex flex-col gap-4">
+          <h2 className="text-lg font-bold text-fg">
+            Multiple Choice Questions <span className="text-sm font-medium text-muted">(10 questions)</span>
+          </h2>
           {mcqQuestions.map((question: testAPI.TestQuestion, idx: number) => (
-            <div key={question.questionId} className="question-container">
-              <h3>Question {idx + 1}</h3>
-              <p className="question-text">{question.text}</p>
-              <div className="options">
-                {question.options?.map((option: string) => (
-                  <label key={option} className="option-label">
-                    <input
-                      type="radio"
-                      name={question.questionId}
-                      value={option}
-                      checked={testState.answers[question.questionId] === option}
-                      onChange={(e) => handleAnswerChange(question.questionId, e.target.value)}
-                      disabled={testState.status === 'submitting'}
-                    />
-                    {option}
-                  </label>
-                ))}
+            <div key={question.questionId} className="rounded-2xl border border-border bg-surface p-5">
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Question {idx + 1}</h3>
+              <p className="mb-4 text-sm font-medium text-fg">{question.text}</p>
+              <div className="flex flex-col gap-2">
+                {question.options?.map((option: string) => {
+                  const checked = testState.answers[question.questionId] === option
+                  return (
+                    <label
+                      key={option}
+                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5 text-sm transition-colors ${
+                        checked
+                          ? 'border-primary bg-primary-subtle text-fg'
+                          : 'border-border text-fg hover:bg-surface-hover'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={question.questionId}
+                        value={option}
+                        checked={checked}
+                        onChange={(e) => handleAnswerChange(question.questionId, e.target.value)}
+                        disabled={isSubmitting}
+                        className="h-4 w-4 accent-primary"
+                      />
+                      {option}
+                    </label>
+                  )
+                })}
               </div>
             </div>
           ))}
         </section>
 
-        {/* Subjective Section */}
-        <section className="test-section">
-          <h2>Subjective / Code Completion (10 questions)</h2>
+        <section className="flex flex-col gap-4">
+          <h2 className="text-lg font-bold text-fg">
+            Subjective / Code Completion <span className="text-sm font-medium text-muted">(10 questions)</span>
+          </h2>
           {subjectiveQuestions.map((question: testAPI.TestQuestion, idx: number) => (
-            <div key={question.questionId} className="question-container">
-              <h3>Question {idx + 1 + mcqQuestions.length}</h3>
-              <p className="question-text">{question.text}</p>
+            <div key={question.questionId} className="rounded-2xl border border-border bg-surface p-5">
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
+                Question {idx + 1 + mcqQuestions.length}
+              </h3>
+              <p className="mb-4 text-sm font-medium text-fg">{question.text}</p>
               <textarea
-                className="answer-textarea"
                 value={testState.answers[question.questionId] || ''}
                 onChange={(e) => handleAnswerChange(question.questionId, e.target.value || null)}
                 placeholder="Enter your answer here..."
-                disabled={testState.status === 'submitting'}
+                disabled={isSubmitting}
+                className="min-h-32 w-full rounded-lg border border-border bg-bg p-3 font-mono text-sm text-fg outline-none transition-colors placeholder:font-sans placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
           ))}
         </section>
 
-        {/* Submit Button */}
-        <div className="submit-section">
+        <div className="flex justify-end pb-4">
           <button
-            className="submit-button"
             onClick={handleSubmit}
-            disabled={testState.status === 'submitting'}
+            disabled={isSubmitting}
+            className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {testState.status === 'submitting' ? 'Submitting...' : 'Submit Test'}
+            {isSubmitting ? 'Submitting...' : 'Submit Test'}
           </button>
         </div>
-      </div>
+      </PageContainer>
 
-      {/* Results Modal */}
       <ResultsModal />
     </div>
   )

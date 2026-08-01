@@ -19,6 +19,7 @@ import {
 } from '../features/chat/chatSlice'
 import ChatHistory from '../components/ChatHistory'
 import MessageInput from '../components/MessageInput'
+import AppHeader from '../components/AppHeader'
 
 export default function LearnModePage() {
   const { topicId } = useParams<{ topicId: string }>()
@@ -63,21 +64,13 @@ export default function LearnModePage() {
   if (!topicId) return null
 
   return (
-    <div className="chat-shell">
-      <header className="chat-header">
-        <button className="secondary-button chat-back-button" onClick={() => navigate('/dashboard')}>
-          ← Back
-        </button>
-        <div className="chat-header-text">
-          {topicName && <p className="chat-topic-name">{topicName}</p>}
-          <h1>Learn Mode</h1>
-        </div>
-      </header>
+    <div className="flex h-screen flex-col bg-bg">
+      <AppHeader onBack={() => navigate('/dashboard')} title={topicName} subtitle="Learn Mode" />
 
       {!session || session.status === 'loading' ? (
-        <p className="muted-text">Loading chat...</p>
+        <p className="px-6 py-8 text-sm text-muted">Loading chat...</p>
       ) : (
-        <>
+        <div className="flex flex-1 flex-col overflow-hidden">
           <ChatHistory
             messages={session.messages}
             streamingContent={session.streamingContent}
@@ -86,9 +79,15 @@ export default function LearnModePage() {
             isLoadingMore={session.isLoadingMore}
             onLoadMore={handleLoadMore}
           />
-          {session.status === 'error' && session.error && <p className="error-text">{session.error}</p>}
-          <MessageInput onSend={handleSend} disabled={session.status === 'streaming'} />
-        </>
+          {session.status === 'error' && session.error && (
+            <p className="mx-auto w-full max-w-3xl px-4 text-sm font-medium text-danger sm:px-6">{session.error}</p>
+          )}
+          <div className="border-t border-border bg-surface px-4 py-3 sm:px-6">
+            <div className="mx-auto w-full max-w-3xl">
+              <MessageInput onSend={handleSend} disabled={session.status === 'streaming'} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

@@ -74,21 +74,23 @@ export default function ChatHistory({
   }, [onLoadMore])
 
   return (
-    <div className="chat-history" ref={containerRef}>
-      <div ref={topSentinelRef} />
-      {isLoadingMore && <p className="muted-text chat-loading-more">Loading older messages...</p>}
-      {!hasMore && messages.length > 0 && (
-        <p className="muted-text chat-history-start">You've reached the beginning of the conversation.</p>
-      )}
-      {messages.map((message, index) =>
-        message.role === 'AI' ? (
-          <AiMessage key={index} content={message.content} />
-        ) : (
-          <UserMessage key={index} content={message.content} />
-        )
-      )}
-      {isStreaming && <StreamingMessage content={streamingContent} />}
-      <div ref={bottomRef} />
+    <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6" ref={containerRef}>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+        <div ref={topSentinelRef} />
+        {isLoadingMore && <p className="text-center text-xs text-muted">Loading older messages...</p>}
+        {!hasMore && messages.length > 0 && (
+          <p className="text-center text-xs text-muted">You've reached the beginning of the conversation.</p>
+        )}
+        {messages.map((message, index) =>
+          message.role === 'AI' ? (
+            <AiMessage key={index} content={message.content} />
+          ) : (
+            <UserMessage key={index} content={message.content} />
+          )
+        )}
+        {isStreaming && <StreamingMessage content={streamingContent} />}
+        <div ref={bottomRef} />
+      </div>
     </div>
   )
 }
