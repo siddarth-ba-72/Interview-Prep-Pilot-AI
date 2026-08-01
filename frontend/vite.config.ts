@@ -12,17 +12,18 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // Fallback for any relative-path requests; API calls use VITE_API_BASE_URL directly.
     proxy: {
       '/api': {
-        target: 'https://prep-pilot-gateway-service.onrender.com',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
       '/oauth2': {
-        target: 'https://prep-pilot-gateway-service.onrender.com',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
       '/login/oauth2': {
-        target: 'https://prep-pilot-gateway-service.onrender.com',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
     },

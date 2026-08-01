@@ -1,0 +1,5 @@
+prep-pilot:
+  frontend-url: https://prep-pilot-sable-one.vercel.app
+  topic-service-url: https://prep-pilot-topic-service.onrender.com
+  user-service-url: https://prep-pilot-user-service.onrender.com
+  ai-service-url: https://interview-prep-pilot-ai.vercel.app

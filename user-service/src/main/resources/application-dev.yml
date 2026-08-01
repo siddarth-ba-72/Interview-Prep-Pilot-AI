@@ -1,0 +1,2 @@
+prep-pilot:
+  frontend-url: http://localhost:3000

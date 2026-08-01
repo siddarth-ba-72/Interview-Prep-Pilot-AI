@@ -6,7 +6,7 @@ spring:
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: "${FRONTEND_ORIGIN}"
+            allowedOrigins: ${prep-pilot.frontend-url}
             allowedMethods:
               - GET
               - POST
@@ -17,23 +17,23 @@ spring:
             allowCredentials: true
       routes:
         - id: oauth2-routes
-          uri: "${USER_SERVICE_URL}"
+          uri: ${prep-pilot.user-service-url}
           predicates:
             - Path=/oauth2/**,/login/oauth2/**
         - id: auth-routes
-          uri: "${USER_SERVICE_URL}"
+          uri: ${prep-pilot.user-service-url}
           predicates:
             - Path=/api/v1/auth/**
         - id: user-routes
-          uri: "${USER_SERVICE_URL}"
+          uri: ${prep-pilot.user-service-url}
           predicates:
             - Path=/api/v1/users/**
         - id: topic-routes
-          uri: "${TOPIC_SERVICE_URL}"
+          uri: ${prep-pilot.topic-service-url}
           predicates:
             - Path=/api/v1/topics/**,/api/v1/sessions/**,/api/v1/reports/**
         - id: ai-routes
-          uri: "${AI_SERVICE_URL}"
+          uri: ${prep-pilot.ai-service-url}
           predicates:
             - Path=/api/v1/ai/**
 

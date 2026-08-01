@@ -20,5 +20,4 @@ server:
   port: 8082
 
 ai-service:
-  url: "${AI_SERVICE_URL}"
   internal-api-key: "${INTERNAL_API_KEY}"

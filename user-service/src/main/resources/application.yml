@@ -15,7 +15,7 @@ spring:
             scope:
               - email
               - profile
-            redirect-uri: "${FRONTEND_ORIGIN}/login/oauth2/code/google"
+            redirect-uri: ${prep-pilot.frontend-url}/login/oauth2/code/google
 
 jwt:
   secret: "${JWT_SECRET}"
@@ -23,7 +23,7 @@ jwt:
   refresh-token-expiry-days: 30
 
 frontend:
-  origin: "${FRONTEND_ORIGIN}"
+  origin: ${prep-pilot.frontend-url}
 
 management:
   endpoints:

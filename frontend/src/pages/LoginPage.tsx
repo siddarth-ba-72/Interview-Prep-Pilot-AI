@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAppDispatch } from '../hooks'
 import { setCredentials, setLoading, setError } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
+import { getBackendUrl } from '../api/config'
 import AuthShell from '../components/AuthShell'
 
 export default function LoginPage() {
@@ -80,7 +81,7 @@ export default function LoginPage() {
       </div>
 
       <a
-        href="/oauth2/authorization/google"
+        href={getBackendUrl('/oauth2/authorization/google')}
         className="flex h-11 w-full items-center justify-center rounded-lg border border-border bg-surface text-sm font-bold text-fg transition-colors hover:bg-surface-hover hover:no-underline"
       >
         Sign in with Google

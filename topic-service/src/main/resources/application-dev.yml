@@ -1,0 +1,2 @@
+ai-service:
+  url: http://ai-service:8000
