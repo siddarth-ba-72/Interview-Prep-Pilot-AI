@@ -12,6 +12,8 @@ public interface TopicRepository extends MongoRepository<Topic, String> {
 
     Optional<Topic> findByIdAndUserId(String id, String userId);
 
+    Optional<Topic> findByPublicIdAndUserId(String publicId, String userId);
+
     boolean existsByUserIdAndNameIgnoreCase(String userId, String name);
 
     void deleteByIdAndUserId(String id, String userId);

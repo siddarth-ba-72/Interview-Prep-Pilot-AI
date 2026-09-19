@@ -75,21 +75,22 @@ export default function TopicCard({ topic, onDelete, isDeleting }: TopicCardProp
           >
             Test
           </button>
-          <button
-            onClick={() => navigate(`/topics/${topic.id}/interviews`)}
-            className="flex-1 rounded-lg border border-border py-2 text-xs font-semibold text-fg transition-colors hover:bg-surface-hover"
-          >
-            Mock
-          </button>
         </div>
+
+        <button
+          onClick={() => navigate(`/topics/${topic.id}/interviews`)}
+          className="w-full rounded-lg bg-primary py-2 text-xs font-bold text-primary-fg transition-colors hover:bg-primary-hover"
+        >
+          Mock Interview
+        </button>
 
         {/* Always shown: a hidden-until-you-have-history link is invisible exactly when
             someone goes looking for it. Both destinations have their own empty state. */}
-        <div className="flex items-center gap-1 text-[11px] font-semibold text-muted">
-          <History size={12} className="shrink-0" />
+        <div className="flex items-center gap-2 text-xs font-semibold text-fg">
+          <History size={14} className="shrink-0" />
           <button
             onClick={() => navigate(`/topics/${topic.id}/tests`)}
-            className="rounded px-1 py-0.5 transition-colors hover:bg-surface-hover hover:text-fg"
+            className="rounded px-1.5 py-0.5 transition-colors hover:bg-surface-hover hover:text-primary"
           >
             Test history
           </button>
@@ -98,7 +99,7 @@ export default function TopicCard({ topic, onDelete, isDeleting }: TopicCardProp
           </span>
           <button
             onClick={() => navigate(`/topics/${topic.id}/interviews/history`)}
-            className="rounded px-1 py-0.5 transition-colors hover:bg-surface-hover hover:text-fg"
+            className="rounded px-1.5 py-0.5 transition-colors hover:bg-surface-hover hover:text-primary"
           >
             Interview history
           </button>

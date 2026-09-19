@@ -4,9 +4,11 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Document(collection = "topics")
 @CompoundIndexes({
@@ -16,6 +18,10 @@ public class Topic {
 
     @Id
     private String id;
+
+    // External-facing identifier used in URLs/API responses so the Mongo _id is never exposed.
+    @Indexed(unique = true, sparse = true)
+    private String publicId;
 
     private String userId;
 
@@ -35,9 +41,13 @@ public class Topic {
         this.name = name;
         this.testCount = 0;
         this.avgScore = null;
+        this.publicId = UUID.randomUUID().toString();
     }
 
     public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getPublicId() { return publicId; }
+    public void setPublicId(String publicId) { this.publicId = publicId; }
     public String getUserId() { return userId; }
     public String getName() { return name; }
     public Integer getTestCount() { return testCount; }

@@ -48,9 +48,11 @@ public class ChatSessionService {
 
     /** Returns the session with the most recent PAGE_SIZE messages. */
     public ChatSessionResponse getOrCreate(String userId, String topicId) {
-        ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topicId)
-                .orElseGet(() -> createSession(userId, topicId));
-        return toPagedResponse(session);
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
+                .orElseThrow(() -> new TopicNotFoundException(topicId));
+        ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topic.getId())
+                .orElseGet(() -> createSession(userId, topic));
+        return toPagedResponse(session, topicId);
     }
 
     /**
@@ -58,7 +60,9 @@ public class ChatSessionService {
      * Pass null to get the most recent page.
      */
     public PagedMessagesResponse getMessages(String userId, String topicId, Instant before) {
-        ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topicId)
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
+                .orElseThrow(() -> new TopicNotFoundException(topicId));
+        ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topic.getId())
                 .orElseThrow(() -> new ChatSessionNotFoundException(topicId));
 
         List<Message> all = session.getMessages();
@@ -88,24 +92,21 @@ public class ChatSessionService {
         return new PagedMessagesResponse(messages, hasMore);
     }
 
-    private ChatSession createSession(String userId, String topicId) {
-        Topic topic = topicRepository.findByIdAndUserId(topicId, userId)
-                .orElseThrow(() -> new TopicNotFoundException(topicId));
-
+    private ChatSession createSession(String userId, Topic topic) {
         String clarifyContent = aiClient.streamLearn(topic.getName(), MODE_CLARIFY, List.of())
                 .collect(StringBuilder::new, StringBuilder::append)
                 .map(StringBuilder::toString)
                 .block();
 
-        ChatSession session = new ChatSession(userId, topicId);
+        ChatSession session = new ChatSession(userId, topic.getId());
         session.addMessage(new Message(Message.Role.AI, clarifyContent, Instant.now()));
         return chatSessionRepository.save(session);
     }
 
     public SseEmitter streamReply(String userId, String topicId, String userContent) {
-        Topic topic = topicRepository.findByIdAndUserId(topicId, userId)
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
                 .orElseThrow(() -> new TopicNotFoundException(topicId));
-        ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topicId)
+        ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topic.getId())
                 .orElseThrow(() -> new ChatSessionNotFoundException(topicId));
 
         String mode = determineMode(session.getMessages().size());
@@ -164,7 +165,7 @@ public class ChatSessionService {
         }
     }
 
-    private ChatSessionResponse toPagedResponse(ChatSession session) {
+    private ChatSessionResponse toPagedResponse(ChatSession session, String publicTopicId) {
         List<Message> all = session.getMessages();
         int total = all.size();
         int startIndex = Math.max(0, total - PAGE_SIZE);
@@ -174,7 +175,7 @@ public class ChatSessionService {
         List<MessageResponse> messages = slice.stream()
                 .map(m -> new MessageResponse(m.getRole().name(), m.getContent(), m.getTimestamp()))
                 .toList();
-        return new ChatSessionResponse(session.getTopicId(), messages, hasMore);
+        return new ChatSessionResponse(publicTopicId, messages, hasMore);
     }
 }
 

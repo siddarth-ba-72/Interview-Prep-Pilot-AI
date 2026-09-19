@@ -50,7 +50,10 @@ class MockInterviewServiceTest {
         aiClient = mock(AiClient.class);
         service = new MockInterviewService(sessionRepository, reportRepository, topicRepository, aiClient);
 
-        when(topicRepository.findByIdAndUserId("topic-1", "user-1")).thenReturn(Optional.of(new Topic("user-1", "Spring Boot")));
+        Topic topic = new Topic("user-1", "Spring Boot");
+        topic.setId("topic-1");
+        when(topicRepository.findByIdAndUserId("topic-1", "user-1")).thenReturn(Optional.of(topic));
+        when(topicRepository.findByPublicIdAndUserId("topic-1", "user-1")).thenReturn(Optional.of(topic));
         when(sessionRepository.save(any(MockInterviewSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(reportRepository.findByMockInterviewSessionId(anyString())).thenReturn(Optional.empty());
     }

@@ -40,7 +40,7 @@ public class TopicService {
 
     @CacheEvict(value = "topics", key = "#userId")
     public void delete(String userId, String topicId) {
-        Topic topic = topicRepository.findByIdAndUserId(topicId, userId)
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
                 .orElseThrow(() -> new TopicNotFoundException(topicId));
         chatSessionService.deleteForTopic(userId, topic.getId());
         topicRepository.deleteByIdAndUserId(topic.getId(), userId);
@@ -48,7 +48,7 @@ public class TopicService {
 
     private TopicResponse toResponse(Topic topic) {
         return new TopicResponse(
-            topic.getId(),
+            topic.getPublicId(),
             topic.getName(),
             topic.getCreatedAt(),
             topic.getTestCount(),

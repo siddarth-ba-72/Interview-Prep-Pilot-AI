@@ -37,23 +37,24 @@ public class TestService {
      * Returns existing IN_PROGRESS test if one exists (idempotent).
      */
     public TestSessionStartResponse startTest(String userId, String topicId) {
-        Topic topic = topicRepository.findByIdAndUserId(topicId, userId)
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
                 .orElseThrow(() -> new TopicNotFoundException(topicId));
+        String internalTopicId = topic.getId();
 
         // Check if test is already in progress
         Optional<TestSession> existingSession = testSessionRepository
-                .findByTopicIdAndUserIdAndStatus(topicId, userId, TestSession.Status.IN_PROGRESS);
+                .findByTopicIdAndUserIdAndStatus(internalTopicId, userId, TestSession.Status.IN_PROGRESS);
 
         if (existingSession.isPresent()) {
             return toTestSessionStartResponse(existingSession.get(), false);
         }
 
         // Compute attempt number: count of all prior sessions (in-progress or completed) + 1
-        int attemptNumber = testSessionRepository.findByTopicIdAndUserId(topicId, userId).size() + 1;
+        int attemptNumber = testSessionRepository.findByTopicIdAndUserId(internalTopicId, userId).size() + 1;
 
         // Look up the most recent completed report to bias question generation toward weak areas
         Optional<TestReport> previousReport = testReportRepository
-                .findTopByTopicIdAndUserIdOrderByAttemptNumberDesc(topicId, userId);
+                .findTopByTopicIdAndUserIdOrderByAttemptNumberDesc(internalTopicId, userId);
 
         List<String> strengths = previousReport.map(TestReport::getStrengths).orElse(null);
         List<String> weaknesses = previousReport.map(TestReport::getWeaknesses).orElse(null);
@@ -64,7 +65,7 @@ public class TestService {
         GenerateTestQuestionsResponse aiResponse = aiClient.generateTestQuestions(topic.getName(), strengths, weaknesses);
 
         // Create and save test session with questions
-        TestSession session = new TestSession(topicId, userId);
+        TestSession session = new TestSession(internalTopicId, userId);
         session.setAttemptNumber(attemptNumber);
         session.setBasedOnPreviousAttempt(basedOnPreviousAttempt);
         List<TestSession.Question> questions = aiResponse.questions().stream()
@@ -89,8 +90,10 @@ public class TestService {
      * Strips sensitive fields (correctOption, modelAnswer) if test is not yet completed.
      */
     public TestSessionStartResponse getTest(String userId, String topicId, String testId) {
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
+                .orElseThrow(() -> new TopicNotFoundException(topicId));
         TestSession session = testSessionRepository.findById(testId)
-                .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topicId))
+                .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topic.getId()))
                 .orElseThrow(() -> new RuntimeException("Test not found"));
 
         return toTestSessionStartResponse(session, false);
@@ -100,16 +103,16 @@ public class TestService {
      * Submits answers, evaluates them, generates report, and updates aggregate score.
      */
     public TestReportResponse submitTest(String userId, String topicId, String testId, SubmitTestRequest request) {
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
+                .orElseThrow(() -> new TopicNotFoundException(topicId));
+
         TestSession session = testSessionRepository.findById(testId)
-                .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topicId))
+                .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topic.getId()))
                 .orElseThrow(() -> new RuntimeException("Test not found"));
 
         if (!session.getStatus().equals(TestSession.Status.IN_PROGRESS)) {
             throw new RuntimeException("Test is already completed");
         }
-
-        Topic topic = topicRepository.findByIdAndUserId(topicId, userId)
-                .orElseThrow(() -> new TopicNotFoundException(topicId));
 
         // Build evaluation request
         List<AnswerForEvaluationRequest> answersForEval = new ArrayList<>();
@@ -186,7 +189,7 @@ public class TestService {
         testSessionRepository.save(session);
 
         // Create report
-        TestReport report = new TestReport(testId, topicId, userId);
+        TestReport report = new TestReport(testId, topic.getId(), userId);
         report.setRawScore(rawScore);
         report.setPassed(rawScore >= 36);
         report.setStrengths(aiEvaluation.strengths());
@@ -242,8 +245,10 @@ public class TestService {
      * Retrieves a test report.
      */
     public TestReportResponse getTestReport(String userId, String topicId, String testId) {
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
+                .orElseThrow(() -> new TopicNotFoundException(topicId));
         TestSession session = testSessionRepository.findById(testId)
-                .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topicId))
+                .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topic.getId()))
                 .orElseThrow(() -> new RuntimeException("Test not found"));
 
         TestReport report = testReportRepository.findByTestSessionId(testId)
@@ -256,7 +261,9 @@ public class TestService {
      * Lists completed test sessions for a topic.
      */
     public List<TestSessionListItemResponse> listTestSessions(String userId, String topicId) {
-        return testReportRepository.findByTopicIdAndUserId(topicId, userId).stream()
+        Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
+                .orElseThrow(() -> new TopicNotFoundException(topicId));
+        return testReportRepository.findByTopicIdAndUserId(topic.getId(), userId).stream()
                 .map(report -> new TestSessionListItemResponse(
                         report.getTestSessionId(),
                         testSessionRepository.findById(report.getTestSessionId())

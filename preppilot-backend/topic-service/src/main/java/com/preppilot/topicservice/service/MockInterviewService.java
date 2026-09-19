@@ -67,9 +67,10 @@ public class MockInterviewService {
 
     public MockInterviewStartResponse startInterview(String userId, String topicId, StartInterviewRequest request) {
         Topic topic = requireTopic(userId, topicId);
+        String internalTopicId = topic.getId();
 
         Optional<MockInterviewSession> existing =
-                sessionRepository.findByTopicIdAndUserIdAndStatus(topicId, userId, MockInterviewSession.Status.IN_PROGRESS);
+                sessionRepository.findByTopicIdAndUserIdAndStatus(internalTopicId, userId, MockInterviewSession.Status.IN_PROGRESS);
         if (existing.isPresent()) {
             MockInterviewSession session = existing.get();
             if (Instant.now().isBefore(session.getDeadlineAt())) {
@@ -87,7 +88,7 @@ public class MockInterviewService {
                     "durationMinutes must be one of 30, 45, or 60");
         }
 
-        MockInterviewSession session = new MockInterviewSession(topicId, userId);
+        MockInterviewSession session = new MockInterviewSession(internalTopicId, userId);
         session.setExperienceLevel(experienceLevel);
         session.setDifficulty(difficulty);
         session.setDurationMinutes(request.durationMinutes());
@@ -371,7 +372,8 @@ public class MockInterviewService {
 
     /** Newest first, so the caller can number attempts by position. */
     public List<MockInterviewSummaryResponse> listInterviews(String userId, String topicId) {
-        List<MockInterviewSession> sessions = sessionRepository.findByTopicIdAndUserId(topicId, userId).stream()
+        Topic topic = requireTopic(userId, topicId);
+        List<MockInterviewSession> sessions = sessionRepository.findByTopicIdAndUserId(topic.getId(), userId).stream()
                 .sorted((a, b) -> {
                     Instant left = a.getCreatedAt();
                     Instant right = b.getCreatedAt();
@@ -490,13 +492,14 @@ public class MockInterviewService {
     // ------------------------------------------------------------------ helpers
 
     private Topic requireTopic(String userId, String topicId) {
-        return topicRepository.findByIdAndUserId(topicId, userId)
+        return topicRepository.findByPublicIdAndUserId(topicId, userId)
                 .orElseThrow(() -> new TopicNotFoundException(topicId));
     }
 
     private MockInterviewSession requireSession(String userId, String topicId, String sessionId) {
+        Topic topic = requireTopic(userId, topicId);
         return sessionRepository.findById(sessionId)
-                .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topicId))
+                .filter(s -> s.getUserId().equals(userId) && s.getTopicId().equals(topic.getId()))
                 .orElseThrow(() -> new MockInterviewNotFoundException(sessionId));
     }
 
