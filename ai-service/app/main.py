@@ -6,6 +6,7 @@ import sys
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.routers.interview import router as interview_router
 from app.routers.learn import router as learn_router
 from app.routers.test import router as test_router
 
@@ -24,6 +25,7 @@ for _name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
 
 app = FastAPI(title="PrepPilot AI Service", version="0.1.0")
 
+app.include_router(interview_router)
 app.include_router(learn_router)
 app.include_router(test_router)
 

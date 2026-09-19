@@ -1,8 +1,10 @@
 package com.preppilot.topicservice.controller;
 
+import com.preppilot.topicservice.dto.MockInterviewDtos.*;
 import com.preppilot.topicservice.dto.TopicDtos.CreateTopicRequest;
 import com.preppilot.topicservice.dto.TopicDtos.TopicResponse;
 import com.preppilot.topicservice.dto.TestDtos.*;
+import com.preppilot.topicservice.service.MockInterviewService;
 import com.preppilot.topicservice.service.TopicService;
 import com.preppilot.topicservice.service.TestService;
 import jakarta.validation.Valid;
@@ -18,10 +20,12 @@ public class TopicController {
 
     private final TopicService topicService;
     private final TestService testService;
+    private final MockInterviewService mockInterviewService;
 
-    public TopicController(TopicService topicService, TestService testService) {
+    public TopicController(TopicService topicService, TestService testService, MockInterviewService mockInterviewService) {
         this.topicService = topicService;
         this.testService = testService;
+        this.mockInterviewService = mockInterviewService;
     }
 
     @PostMapping
@@ -82,5 +86,49 @@ public class TopicController {
                                                                               @PathVariable String topicId) {
         List<TestSessionListItemResponse> response = testService.listTestSessions(userId, topicId);
         return ResponseEntity.ok(response);
+    }
+
+    // Mock Interview Endpoints
+
+    @PostMapping("/{topicId}/interviews")
+    public ResponseEntity<MockInterviewStartResponse> startInterview(@RequestHeader("X-User-Id") String userId,
+                                                                      @PathVariable String topicId,
+                                                                      @RequestBody StartInterviewRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(mockInterviewService.startInterview(userId, topicId, request));
+    }
+
+    @GetMapping("/{topicId}/interviews/{sessionId}")
+    public ResponseEntity<MockInterviewStateResponse> getInterview(@RequestHeader("X-User-Id") String userId,
+                                                                    @PathVariable String topicId,
+                                                                    @PathVariable String sessionId) {
+        return ResponseEntity.ok(mockInterviewService.getInterview(userId, topicId, sessionId));
+    }
+
+    @PostMapping("/{topicId}/interviews/{sessionId}/answer")
+    public ResponseEntity<MockInterviewAnswerResponse> answerInterview(@RequestHeader("X-User-Id") String userId,
+                                                                        @PathVariable String topicId,
+                                                                        @PathVariable String sessionId,
+                                                                        @RequestBody AnswerInterviewRequest request) {
+        return ResponseEntity.ok(mockInterviewService.answerInterview(userId, topicId, sessionId, request.answer()));
+    }
+
+    @PostMapping("/{topicId}/interviews/{sessionId}/end")
+    public ResponseEntity<MockInterviewReportResponse> endInterview(@RequestHeader("X-User-Id") String userId,
+                                                                    @PathVariable String topicId,
+                                                                    @PathVariable String sessionId) {
+        return ResponseEntity.ok(mockInterviewService.endInterview(userId, topicId, sessionId));
+    }
+
+    @GetMapping("/{topicId}/interviews/{sessionId}/report")
+    public ResponseEntity<MockInterviewReportResponse> getInterviewReport(@RequestHeader("X-User-Id") String userId,
+                                                                          @PathVariable String topicId,
+                                                                          @PathVariable String sessionId) {
+        return ResponseEntity.ok(mockInterviewService.getInterviewReport(userId, topicId, sessionId));
+    }
+
+    @GetMapping("/{topicId}/interviews")
+    public ResponseEntity<List<MockInterviewSummaryResponse>> listInterviews(@RequestHeader("X-User-Id") String userId,
+                                                                             @PathVariable String topicId) {
+        return ResponseEntity.ok(mockInterviewService.listInterviews(userId, topicId));
     }
 }

@@ -1,0 +1,14 @@
+# The gateway is built with its own directory as the build context, so it needs its own
+# ignore list (a parent .dockerignore does not apply).
+build/
+bin/
+.gradle/
+out/
+logs/
+.idea/
+*.iml
+
+# Secrets are supplied at runtime via docker-compose `env_file`, never baked into an image.
+.env
+.env.*
+!.env.example

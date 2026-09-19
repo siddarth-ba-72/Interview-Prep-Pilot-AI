@@ -9,6 +9,9 @@ import LearnModePage from './pages/LearnModePage'
 import TestPage from './pages/TestPage'
 import TestReportPage from './pages/TestReportPage'
 import TestHistoryPage from './pages/TestHistoryPage'
+import MockInterviewPage from './pages/MockInterviewPage'
+import MockInterviewHistoryPage from './pages/MockInterviewHistoryPage'
+import MockInterviewReportPage from './pages/MockInterviewReportPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { accessToken, status } = useAppSelector((state) => state.auth)
@@ -62,6 +65,30 @@ export default function App() {
           element={
             <ProtectedRoute>
               <TestReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/topics/:topicId/interviews"
+          element={
+            <ProtectedRoute>
+              <MockInterviewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/topics/:topicId/interviews/history"
+          element={
+            <ProtectedRoute>
+              <MockInterviewHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/topics/:topicId/interviews/:sessionId/report"
+          element={
+            <ProtectedRoute>
+              <MockInterviewReportPage />
             </ProtectedRoute>
           }
         />

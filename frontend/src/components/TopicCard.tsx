@@ -23,7 +23,6 @@ export default function TopicCard({ topic, onDelete, isDeleting }: TopicCardProp
   }
 
   const initial = topic.name.charAt(0).toUpperCase()
-  const hasHistory = topic.testCount !== undefined && topic.testCount > 0
 
   return (
     <div className="group flex flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
@@ -62,35 +61,48 @@ export default function TopicCard({ topic, onDelete, isDeleting }: TopicCardProp
         </div>
       )}
 
-      <div className="mt-auto flex items-center gap-2">
-        <button
-          onClick={() => navigate(`/topics/${topic.id}/learn`)}
-          className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-fg transition-colors hover:bg-primary-hover"
-        >
-          Learn
-        </button>
-        <button
-          onClick={() => navigate(`/topics/${topic.id}/test`)}
-          className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-fg transition-colors hover:bg-primary-hover"
-        >
-          Test
-        </button>
-        <button
-          disabled
-          title="Coming soon"
-          className="flex-1 cursor-not-allowed rounded-lg border border-border py-2 text-xs font-semibold text-muted/60"
-        >
-          Mock
-        </button>
-        {hasHistory && (
+      <div className="mt-auto flex flex-col gap-2.5">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/topics/${topic.id}/learn`)}
+            className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-fg transition-colors hover:bg-primary-hover"
+          >
+            Learn
+          </button>
+          <button
+            onClick={() => navigate(`/topics/${topic.id}/test`)}
+            className="flex-1 rounded-lg bg-primary py-2 text-xs font-bold text-primary-fg transition-colors hover:bg-primary-hover"
+          >
+            Test
+          </button>
+          <button
+            onClick={() => navigate(`/topics/${topic.id}/interviews`)}
+            className="flex-1 rounded-lg border border-border py-2 text-xs font-semibold text-fg transition-colors hover:bg-surface-hover"
+          >
+            Mock
+          </button>
+        </div>
+
+        {/* Always shown: a hidden-until-you-have-history link is invisible exactly when
+            someone goes looking for it. Both destinations have their own empty state. */}
+        <div className="flex items-center gap-1 text-[11px] font-semibold text-muted">
+          <History size={12} className="shrink-0" />
           <button
             onClick={() => navigate(`/topics/${topic.id}/tests`)}
-            title="Test history"
-            className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg border border-border text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+            className="rounded px-1 py-0.5 transition-colors hover:bg-surface-hover hover:text-fg"
           >
-            <History size={14} />
+            Test history
           </button>
-        )}
+          <span aria-hidden className="text-border">
+            |
+          </span>
+          <button
+            onClick={() => navigate(`/topics/${topic.id}/interviews/history`)}
+            className="rounded px-1 py-0.5 transition-colors hover:bg-surface-hover hover:text-fg"
+          >
+            Interview history
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -2,23 +2,40 @@ package com.preppilot.topicservice.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.preppilot.topicservice.dto.MockInterviewDtos.GenerateInterviewReportExchangeRequest;
+import com.preppilot.topicservice.dto.MockInterviewDtos.GenerateInterviewReportRequest;
+import com.preppilot.topicservice.dto.MockInterviewDtos.GenerateInterviewReportResponse;
+import com.preppilot.topicservice.dto.MockInterviewDtos.NextTurnRequest;
+import com.preppilot.topicservice.dto.MockInterviewDtos.NextTurnResponse;
+import com.preppilot.topicservice.dto.MockInterviewDtos.PlanInterviewRequest;
+import com.preppilot.topicservice.dto.MockInterviewDtos.PlanInterviewResponse;
 import com.preppilot.topicservice.dto.TestDtos.GenerateTestQuestionsRequest;
 import com.preppilot.topicservice.dto.TestDtos.GenerateTestQuestionsResponse;
 import com.preppilot.topicservice.dto.TestDtos.EvaluateAnswersRequest;
 import com.preppilot.topicservice.dto.TestDtos.EvaluateAnswersResponse;
 import com.preppilot.topicservice.model.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Flux;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class AiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(AiClient.class);
+
+    /** Ceiling for a synchronous AI call. Past this the caller falls back rather than hanging. */
+    private static final Duration AI_CALL_TIMEOUT = Duration.ofSeconds(90);
 
     private final WebClient aiWebClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -106,5 +123,59 @@ public class AiClient {
                                 .map(body -> new RuntimeException("AI Service returned " + response.statusCode())))
                 .bodyToMono(EvaluateAnswersResponse.class)
                 .block();
+    }
+
+    public PlanInterviewResponse planInterview(String topicName, String experienceLevel, String difficulty, Integer durationMinutes) {
+        PlanInterviewRequest body = new PlanInterviewRequest(topicName, experienceLevel, difficulty, durationMinutes);
+        return postToAi("/ai/interview/plan", body, PlanInterviewResponse.class);
+    }
+
+    public NextTurnResponse nextInterviewTurn(NextTurnRequest request) {
+        return postToAi("/ai/interview/next-turn", request, NextTurnResponse.class);
+    }
+
+    public GenerateInterviewReportResponse generateInterviewReport(String topicName, String experienceLevel,
+                                                                     String difficulty,
+                                                                     List<GenerateInterviewReportExchangeRequest> exchanges) {
+        GenerateInterviewReportRequest body = new GenerateInterviewReportRequest(topicName, experienceLevel, difficulty, exchanges);
+        return postToAi("/ai/interview/generate-report", body, GenerateInterviewReportResponse.class);
+    }
+
+    /**
+     * Interview calls are synchronous and user-facing, so they get a hard ceiling: without one
+     * a hung LLM call blocks the request thread indefinitely. Malformed-JSON retries live in the
+     * AI Service (where the bad output can actually be fed back for repair); retrying here would
+     * only multiply that latency, so we retry solely on connection-level failures.
+     */
+    private <T> T postToAi(String uri, Object body, Class<T> responseType) {
+        return aiWebClient.post()
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .retrieve()
+                .onStatus(status -> !status.is2xxSuccessful(),
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(errorBody -> new AiCallException(
+                                        "AI Service returned " + response.statusCode() + " for " + uri + ": " + errorBody)))
+                .bodyToMono(responseType)
+                .timeout(AI_CALL_TIMEOUT)
+                .retryWhen(Retry.max(1).filter(this::isConnectionFailure))
+                .block();
+    }
+
+    private boolean isConnectionFailure(Throwable throwable) {
+        boolean retryable = throwable instanceof WebClientRequestException;
+        if (retryable) {
+            log.warn("Could not reach the AI Service, retrying once: {}", throwable.getMessage());
+        }
+        return retryable;
+    }
+
+    /** Distinguishes an AI-side failure from a bug in our own request handling. */
+    public static class AiCallException extends RuntimeException {
+        public AiCallException(String message) {
+            super(message);
+        }
     }
 }
