@@ -4,23 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - 'gateway/**'
-      - 'user-service/**'
-      - 'topic-service/**'
+      - 'preppilot-backend/**'
       - '.github/workflows/backend-lint.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'gateway/**'
-      - 'user-service/**'
-      - 'topic-service/**'
+      - 'preppilot-backend/**'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [gateway, user-service, topic-service]
+        service: [gateway, user-service, topic-service, cache-service]
     steps:
       - uses: actions/checkout@v4
 
@@ -30,9 +26,5 @@ jobs:
           java-version: '17'
 
       - name: Build ${{ matrix.service }}
-        working-directory: ${{ matrix.service }}
-        run: ./gradlew build -x test --no-daemon
-
-      - name: Check code style
-        working-directory: ${{ matrix.service }}
-        run: ./gradlew checkstyleMain -x test --no-daemon || echo "Checkstyle warnings (non-blocking)"
+        working-directory: preppilot-backend
+        run: ./gradlew :${{ matrix.service }}:build -x test --no-daemon
