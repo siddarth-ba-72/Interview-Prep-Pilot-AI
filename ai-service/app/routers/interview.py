@@ -21,6 +21,7 @@ from app.schemas import (
     InterviewNextTurnQuestion,
     InterviewEvaluation,
 )
+from app.scope_validator import validate_topic_scope
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,11 @@ def _asked_questions(request: InterviewNextTurnRequest) -> list[str]:
 
 @router.post("/plan", response_model=InterviewPlanResponse)
 async def plan_interview(request: InterviewPlanRequest, _=Depends(require_internal_api_key_or_user_id)):
+    # Validate topic scope
+    is_valid, error_msg = await validate_topic_scope(request.topic_name)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     try:
         messages = build_interview_plan_messages(
             request.topic_name, request.experience_level, request.difficulty, request.duration_minutes
@@ -247,6 +253,11 @@ async def next_turn(request: InterviewNextTurnRequest, _=Depends(require_interna
 
 @router.post("/generate-report", response_model=GenerateInterviewReportResponse)
 async def generate_report(request: GenerateInterviewReportRequest, _=Depends(require_internal_api_key_or_user_id)):
+    # Validate topic scope
+    is_valid, error_msg = await validate_topic_scope(request.topic_name)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     try:
         messages = build_interview_report_messages(
             request.topic_name, request.experience_level, request.difficulty,

@@ -10,6 +10,7 @@ from app.schemas import (
 from app.prompts import build_test_generation_messages, build_test_evaluation_messages
 from app.llm import call_llm
 from app.auth import require_internal_api_key_or_user_id
+from app.scope_validator import validate_topic_scope
 
 router = APIRouter(prefix="/ai/test", tags=["test"])
 
@@ -17,6 +18,11 @@ router = APIRouter(prefix="/ai/test", tags=["test"])
 @router.post("/generate", response_model=GenerateTestQuestionsResponse)
 async def generate_questions(request: GenerateTestQuestionsRequest, _=Depends(require_internal_api_key_or_user_id)):
     """Generate 20 test questions (10 MCQ + 10 SUBJECTIVE) for a topic."""
+    # Validate topic scope
+    is_valid, error_msg = await validate_topic_scope(request.topic_name)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     try:
         messages = build_test_generation_messages(request.topic_name, request.strengths, request.weaknesses)
         response_text = await call_llm(messages)
@@ -56,6 +62,11 @@ async def generate_questions(request: GenerateTestQuestionsRequest, _=Depends(re
 @router.post("/evaluate", response_model=EvaluateAnswersResponse)
 async def evaluate_answers(request: EvaluateAnswersRequest, _=Depends(require_internal_api_key_or_user_id)):
     """Evaluate test answers and provide per-question feedback."""
+    # Validate topic scope
+    is_valid, error_msg = await validate_topic_scope(request.topic_name)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
     try:
         # Convert request to dict for prompts, including questionId
         answers = [
