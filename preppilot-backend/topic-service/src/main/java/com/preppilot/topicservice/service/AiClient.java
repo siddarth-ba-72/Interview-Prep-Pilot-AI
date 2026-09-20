@@ -92,7 +92,7 @@ public class AiClient {
                     try {
                         node = objectMapper.readTree(data);
                     } catch (Exception e) {
-                        log.error(ErrorCode.AI_SERVICE_ERROR.getCode(), "Malformed response from AI Service", Map.of("topic", topicName));
+                        log.error(ErrorCode.STREAMING_ERROR.getCode(), "Malformed response from AI Service", Map.of("topic", topicName));
                         sink.error(new AiStreamException("Malformed response from AI Service"));
                         return;
                     }

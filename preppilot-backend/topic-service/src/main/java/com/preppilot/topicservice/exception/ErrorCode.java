@@ -3,14 +3,11 @@ package com.preppilot.topicservice.exception;
 import org.springframework.http.HttpStatus;
 
 public enum ErrorCode {
-    // Validation errors (400)
-    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Validation failed"),
-    INVALID_TOPIC(HttpStatus.BAD_REQUEST, "Invalid topic provided"),
-    OUT_OF_SCOPE_TOPIC(HttpStatus.BAD_REQUEST, "Topic is out of scope"),
-    DUPLICATE_TOPIC(HttpStatus.BAD_REQUEST, "Topic already exists"),
-
-    // Missing context (401)
-    MISSING_USER_CONTEXT(HttpStatus.UNAUTHORIZED, "Missing required user context"),
+    // User errors (4xx) - Client-side errors
+    USER_INVALID_INPUT(HttpStatus.BAD_REQUEST, "Invalid input provided"),
+    USER_INVALID_TOPIC(HttpStatus.BAD_REQUEST, "Invalid topic provided"),
+    USER_INVALID_CONFIG(HttpStatus.BAD_REQUEST, "Invalid configuration"),
+    USER_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "Unauthorized access"),
 
     // Not found (404)
     TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, "Topic not found"),
@@ -22,8 +19,8 @@ public enum ErrorCode {
     AI_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "Invalid request for AI service"),
     AI_SERVICE_UNAVAILABLE(HttpStatus.BAD_GATEWAY, "AI service temporarily unavailable"),
 
-    // Internal server errors (500)
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error"),
+    // System/Server errors (5xx)
+    SYSTEM_INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error"),
     STREAMING_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Error during streaming operation");
 
     private final HttpStatus status;

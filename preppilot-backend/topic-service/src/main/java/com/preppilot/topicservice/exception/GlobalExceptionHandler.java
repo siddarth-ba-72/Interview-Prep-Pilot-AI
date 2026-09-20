@@ -33,20 +33,20 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .map(f -> f.getDefaultMessage())
                 .orElse("Validation failed");
-        log.error(ErrorCode.VALIDATION_ERROR.getCode(), message);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody(ErrorCode.VALIDATION_ERROR.getCode(), message));
+        log.error(ErrorCode.USER_INVALID_INPUT.getCode(), message);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorBody(ErrorCode.USER_INVALID_INPUT.getCode(), message));
     }
 
     @ExceptionHandler(MissingRequestHeaderException.class)
     public ResponseEntity<Object> handleMissingHeader(MissingRequestHeaderException ex) {
-        log.error(ErrorCode.MISSING_USER_CONTEXT.getCode(), "Missing header: " + ex.getHeaderName());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorBody(ErrorCode.MISSING_USER_CONTEXT.getCode(), "Missing required header"));
+        log.error(ErrorCode.USER_UNAUTHORIZED.getCode(), "Missing header: " + ex.getHeaderName());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorBody(ErrorCode.USER_UNAUTHORIZED.getCode(), "Missing required header"));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGenericException(Exception ex) {
-        log.error(ErrorCode.INTERNAL_ERROR.getCode(), "Unexpected error", ex);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody(ErrorCode.INTERNAL_ERROR.getCode(), "Internal server error"));
+        log.error(ErrorCode.SYSTEM_INTERNAL_ERROR.getCode(), "Unexpected error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody(ErrorCode.SYSTEM_INTERNAL_ERROR.getCode(), "Internal server error"));
     }
 
     private Map<String, Object> errorBody(String code, String message) {
