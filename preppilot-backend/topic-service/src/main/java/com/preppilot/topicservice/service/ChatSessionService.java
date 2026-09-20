@@ -4,12 +4,14 @@ import com.preppilot.topicservice.dto.ChatDtos.ChatSessionResponse;
 import com.preppilot.topicservice.dto.ChatDtos.MessageResponse;
 import com.preppilot.topicservice.dto.ChatDtos.PagedMessagesResponse;
 import com.preppilot.topicservice.exception.ChatSessionNotFoundException;
+import com.preppilot.topicservice.exception.ErrorCode;
 import com.preppilot.topicservice.exception.TopicNotFoundException;
 import com.preppilot.topicservice.model.ChatSession;
 import com.preppilot.topicservice.model.Message;
 import com.preppilot.topicservice.model.Topic;
 import com.preppilot.topicservice.repository.ChatSessionRepository;
 import com.preppilot.topicservice.repository.TopicRepository;
+import com.preppilot.topicservice.util.StructuredLogger;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -26,6 +28,7 @@ import java.util.Map;
 @Service
 public class ChatSessionService {
 
+    private static final StructuredLogger log = new StructuredLogger(ChatSessionService.class);
     private static final int PAGE_SIZE = 20;
     private static final String MODE_CLARIFY = "CLARIFY";
     private static final String MODE_GENERATE_CONTENT = "GENERATE_CONTENT";
@@ -128,6 +131,12 @@ public class ChatSessionService {
                     sendEvent(emitter, Map.of("token", token));
                 },
                 error -> {
+                    log.error(
+                            ErrorCode.AI_SERVICE_ERROR.getCode(),
+                            "Learn Mode stream failed",
+                            error,
+                            Map.of("userId", userId, "topicId", topicId)
+                    );
                     sendEvent(emitter, Map.of("error", "The AI response could not be completed. Please try again."));
                     emitter.complete();
                 },

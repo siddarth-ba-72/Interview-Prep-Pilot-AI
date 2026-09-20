@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
 """
-Test script to verify guardrails are working correctly.
-Tests both keyword-based and LLM-based validation.
+Manual smoke test for topic scope classification.
+
+Scope enforcement for Learn Mode chat now happens inside the model itself (see
+prompts.SCOPE_GUARD) rather than a separate keyword gate, so it isn't something
+this script can exercise without actually streaming a chat turn. This script
+covers the one remaining pre-check: validate_topic_scope(), used before
+generating structured content (test questions, interview plans) where there is
+no conversational turn for the model to decline within.
+
+Requires a configured LLM_API_KEY - makes real model calls.
 """
 import asyncio
-from app.scope_validator import validate_topic_scope, validate_user_message_scope, _is_tech_related
+from app.scope_validator import validate_topic_scope
+
 
 async def run_tests():
     print("=" * 60)
-    print("Testing Guardrails")
+    print("Testing topic scope classification")
     print("=" * 60)
 
-    # Test 1: Tech-related topics (should pass)
     print("\n[TEST 1] Tech-related topics (should be VALID)")
     tech_topics = [
         "Python",
@@ -28,7 +36,6 @@ async def run_tests():
         status = "✓ PASS" if is_valid else "✗ FAIL"
         print(f"  {status}: '{topic}'")
 
-    # Test 2: Out-of-scope topics (should fail)
     print("\n[TEST 2] Out-of-scope topics (should be INVALID)")
     out_of_scope_topics = [
         "Politics",
@@ -45,52 +52,10 @@ async def run_tests():
         if error:
             print(f"       Error message: {error[:60]}...")
 
-    # Test 3: User messages in tech context (should pass)
-    print("\n[TEST 3] Tech-related messages (should be VALID)")
-    tech_messages = [
-        "What is a binary search tree?",
-        "How do you optimize database queries?",
-        "Explain the difference between Docker and Kubernetes",
-        "What's the time complexity of merge sort?",
-    ]
-    for msg in tech_messages:
-        is_valid, error = await validate_user_message_scope("Python", msg)
-        status = "✓ PASS" if is_valid else "✗ FAIL"
-        print(f"  {status}: '{msg}'")
-
-    # Test 4: Out-of-scope messages (should fail)
-    print("\n[TEST 4] Out-of-scope messages (should be INVALID)")
-    out_of_scope_messages = [
-        "Tell me about the latest movies",
-        "What's your favorite sports team?",
-        "Give me cooking recipes",
-        "Who's your favorite celebrity?",
-    ]
-    for msg in out_of_scope_messages:
-        is_valid, error = await validate_user_message_scope("Python", msg)
-        status = "✗ FAIL" if is_valid else "✓ PASS"
-        print(f"  {status}: '{msg}'")
-        if error and not is_valid:
-            print(f"       Error message: {error[:60]}...")
-
-    # Test 5: Keyword detection
-    print("\n[TEST 5] Keyword detection (quick check)")
-    keyword_tests = [
-        ("python programming", True),
-        ("data structures", True),
-        ("machine learning", True),
-        ("politics and elections", False),
-        ("sports teams", False),
-        ("cooking recipes", False),
-    ]
-    for text, expected in keyword_tests:
-        result = _is_tech_related(text)
-        status = "✓" if result == expected else "✗"
-        print(f"  {status} '{text}' -> {result} (expected {expected})")
-
     print("\n" + "=" * 60)
-    print("Guardrails testing complete!")
+    print("Scope classification testing complete!")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     asyncio.run(run_tests())
