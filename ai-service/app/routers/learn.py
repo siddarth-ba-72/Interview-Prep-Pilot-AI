@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from app.auth import require_caller_identity
+from app.exceptions import InvalidTopicError, ErrorCode
 from app.llm import stream_completion
 from app.prompts import build_messages
 from app.schemas import LearnStreamRequest
 from app.scope_validator import validate_topic_scope, validate_user_message_scope
+from app.logging_config import user_id_context
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,22 @@ async def _event_stream(request: LearnStreamRequest):
     # Validate topic scope
     is_valid_topic, error_msg = await validate_topic_scope(request.topic_name)
     if not is_valid_topic:
-        yield _sse_event({"token": error_msg})
+        user_id = user_id_context.get()
+        log_record = logging.LogRecord(
+            name=logger.name,
+            level=logging.WARNING,
+            pathname="",
+            lineno=0,
+            msg="Invalid topic",
+            args=(),
+            exc_info=None,
+        )
+        log_record.context_data = {
+            "error_code": ErrorCode.USER_INVALID_TOPIC,
+            "topic": request.topic_name,
+        }
+        logger.handle(log_record)
+        yield _sse_event({"error": error_msg})
         yield "data: [DONE]\n\n"
         return
 
@@ -38,7 +55,22 @@ async def _event_stream(request: LearnStreamRequest):
                 request.topic_name, latest_user_msg
             )
             if not is_valid_msg:
-                yield _sse_event({"token": msg_error})
+                user_id = user_id_context.get()
+                log_record = logging.LogRecord(
+                    name=logger.name,
+                    level=logging.WARNING,
+                    pathname="",
+                    lineno=0,
+                    msg="User message out of scope",
+                    args=(),
+                    exc_info=None,
+                )
+                log_record.context_data = {
+                    "error_code": ErrorCode.USER_INVALID_INPUT,
+                    "topic": request.topic_name,
+                }
+                logger.handle(log_record)
+                yield _sse_event({"error": msg_error})
                 yield "data: [DONE]\n\n"
                 return
 
@@ -46,8 +78,21 @@ async def _event_stream(request: LearnStreamRequest):
     try:
         async for token in stream_completion(messages):
             yield _sse_event({"token": token})
-    except Exception:
-        logger.exception("LLM streaming failed")
+    except Exception as e:
+        log_record = logging.LogRecord(
+            name=logger.name,
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="LLM streaming failed",
+            args=(),
+            exc_info=(type(e), e, e.__traceback__),
+        )
+        log_record.context_data = {
+            "error_code": ErrorCode.SYSTEM_INTERNAL_ERROR,
+            "topic": request.topic_name,
+        }
+        logger.handle(log_record)
         yield _sse_event({"error": "The AI response could not be completed. Please try again."})
         return
     yield "data: [DONE]\n\n"

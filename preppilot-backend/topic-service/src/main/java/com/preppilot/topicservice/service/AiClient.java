@@ -13,10 +13,12 @@ import com.preppilot.topicservice.dto.TestDtos.GenerateTestQuestionsRequest;
 import com.preppilot.topicservice.dto.TestDtos.GenerateTestQuestionsResponse;
 import com.preppilot.topicservice.dto.TestDtos.EvaluateAnswersRequest;
 import com.preppilot.topicservice.dto.TestDtos.EvaluateAnswersResponse;
+import com.preppilot.topicservice.exception.ApiException;
+import com.preppilot.topicservice.exception.ErrorCode;
 import com.preppilot.topicservice.model.Message;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.preppilot.topicservice.util.StructuredLogger;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
@@ -32,7 +34,7 @@ import java.util.Map;
 @Service
 public class AiClient {
 
-    private static final Logger log = LoggerFactory.getLogger(AiClient.class);
+    private static final StructuredLogger log = new StructuredLogger(AiClient.class);
 
     /** Ceiling for a synchronous AI call. Past this the caller falls back rather than hanging. */
     private static final Duration AI_CALL_TIMEOUT = Duration.ofSeconds(90);
@@ -67,7 +69,15 @@ public class AiClient {
                 .retrieve()
                 .onStatus(status -> !status.is2xxSuccessful(),
                         response -> response.bodyToMono(String.class)
-                                .map(body2 -> new AiStreamException("AI Service returned " + response.statusCode())))
+                                .defaultIfEmpty("")
+                                .map(errorBody -> {
+                                    String message = "AI Service returned " + response.statusCode();
+                                    if (!errorBody.isEmpty()) {
+                                        message += ": " + errorBody;
+                                    }
+                                    log.error(ErrorCode.AI_SERVICE_ERROR.getCode(), message, Map.of("topic", topicName, "mode", mode));
+                                    return new AiStreamException(message);
+                                }))
                 .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
                 .handle((event, sink) -> {
                     String data = event.data();
@@ -82,11 +92,14 @@ public class AiClient {
                     try {
                         node = objectMapper.readTree(data);
                     } catch (Exception e) {
+                        log.error(ErrorCode.AI_SERVICE_ERROR.getCode(), "Malformed response from AI Service", Map.of("topic", topicName));
                         sink.error(new AiStreamException("Malformed response from AI Service"));
                         return;
                     }
                     if (node.has("error")) {
-                        sink.error(new AiStreamException(node.get("error").asText()));
+                        String errorMsg = node.get("error").asText();
+                        log.error(ErrorCode.AI_SERVICE_ERROR.getCode(), "AI error in stream: " + errorMsg, Map.of("topic", topicName));
+                        sink.error(new AiStreamException(errorMsg));
                     } else if (node.has("token")) {
                         sink.next(node.get("token").asText());
                     }
@@ -104,9 +117,22 @@ public class AiClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
+                .onStatus(status -> status.value() == 400,
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(errorBody -> {
+                                    String message = "Invalid test request: " + errorBody;
+                                    log.error(ErrorCode.AI_INVALID_REQUEST.getCode(), message, Map.of("topic", topicName));
+                                    return new ApiException(ErrorCode.AI_INVALID_REQUEST, message);
+                                }))
                 .onStatus(status -> !status.is2xxSuccessful(),
                         response -> response.bodyToMono(String.class)
-                                .map(body2 -> new RuntimeException("AI Service returned " + response.statusCode())))
+                                .defaultIfEmpty("")
+                                .map(errorBody -> {
+                                    String message = "AI Service error: " + response.statusCode();
+                                    log.error(ErrorCode.AI_SERVICE_ERROR.getCode(), message, Map.of("topic", topicName));
+                                    return new ApiException(ErrorCode.AI_SERVICE_ERROR, message);
+                                }))
                 .bodyToMono(GenerateTestQuestionsResponse.class)
                 .block();
     }
@@ -118,9 +144,22 @@ public class AiClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(status -> status.value() == 400,
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(errorBody -> {
+                                    String message = "Invalid evaluation request: " + errorBody;
+                                    log.error(ErrorCode.AI_INVALID_REQUEST.getCode(), message, Map.of("topic", topicName));
+                                    return new ApiException(ErrorCode.AI_INVALID_REQUEST, message);
+                                }))
                 .onStatus(status -> !status.is2xxSuccessful(),
                         response -> response.bodyToMono(String.class)
-                                .map(body -> new RuntimeException("AI Service returned " + response.statusCode())))
+                                .defaultIfEmpty("")
+                                .map(errorBody -> {
+                                    String message = "AI Service error: " + response.statusCode();
+                                    log.error(ErrorCode.AI_SERVICE_ERROR.getCode(), message, Map.of("topic", topicName));
+                                    return new ApiException(ErrorCode.AI_SERVICE_ERROR, message);
+                                }))
                 .bodyToMono(EvaluateAnswersResponse.class)
                 .block();
     }
@@ -153,11 +192,30 @@ public class AiClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .retrieve()
+                .onStatus(status -> status.value() == 400,
+                        response -> response.bodyToMono(String.class)
+                                .defaultIfEmpty("")
+                                .map(errorBody -> {
+                                    String message = "Invalid AI request";
+                                    if (!errorBody.isEmpty()) {
+                                        message += ": " + errorBody;
+                                    }
+                                    log.error(ErrorCode.AI_INVALID_REQUEST.getCode(), message, Map.of("endpoint", uri));
+                                    return new ApiException(ErrorCode.AI_INVALID_REQUEST, message);
+                                }))
                 .onStatus(status -> !status.is2xxSuccessful(),
                         response -> response.bodyToMono(String.class)
                                 .defaultIfEmpty("")
-                                .map(errorBody -> new AiCallException(
-                                        "AI Service returned " + response.statusCode() + " for " + uri + ": " + errorBody)))
+                                .map(errorBody -> {
+                                    String statusCode = response.statusCode().toString();
+                                    ErrorCode errorCode = ErrorCode.AI_SERVICE_ERROR;
+                                    String message = "AI Service error: " + statusCode;
+                                    if (!errorBody.isEmpty()) {
+                                        message += " - " + errorBody;
+                                    }
+                                    log.error(errorCode.getCode(), message, Map.of("endpoint", uri, "status", statusCode));
+                                    return new ApiException(errorCode, message);
+                                }))
                 .bodyToMono(responseType)
                 .timeout(AI_CALL_TIMEOUT)
                 .retryWhen(Retry.max(1).filter(this::isConnectionFailure))
@@ -167,7 +225,7 @@ public class AiClient {
     private boolean isConnectionFailure(Throwable throwable) {
         boolean retryable = throwable instanceof WebClientRequestException;
         if (retryable) {
-            log.warn("Could not reach the AI Service, retrying once: {}", throwable.getMessage());
+            log.warn(ErrorCode.AI_SERVICE_UNAVAILABLE.getCode(), "Could not reach the AI Service, retrying once");
         }
         return retryable;
     }

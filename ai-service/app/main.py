@@ -1,30 +1,29 @@
 # AI Service — FastAPI
 
 import logging
-import sys
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.logging_config import setup_structured_logging
+from app.error_handlers import register_error_handlers
+from app.middleware import UserContextMiddleware
 from app.routers.interview import router as interview_router
 from app.routers.learn import router as learn_router
 from app.routers.test import router as test_router
 
-# Console logging setup
-_handler = logging.StreamHandler(sys.stdout)
-_handler.setFormatter(
-    logging.Formatter("%(asctime)s [%(threadName)s] %(levelname)-5s %(name)s - %(message)s")
-)
-
-logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
-# uvicorn loggers
-for _name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
-    _log = logging.getLogger(_name)
-    _log.handlers = [_handler]
-    _log.propagate = False
+# Setup structured JSON logging
+setup_structured_logging()
 
 app = FastAPI(title="PrepPilot AI Service", version="0.1.0")
 
+# Register middleware for user context extraction
+app.add_middleware(UserContextMiddleware)
+
+# Register global error handlers
+register_error_handlers(app)
+
+# Include routers
 app.include_router(interview_router)
 app.include_router(learn_router)
 app.include_router(test_router)
