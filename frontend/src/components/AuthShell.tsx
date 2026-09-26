@@ -19,8 +19,8 @@ export default function AuthShell({
   footer?: ReactNode
 }) {
   return (
-    <div className="flex min-h-screen w-full bg-bg">
-      <div className="relative hidden w-1/2 shrink-0 overflow-hidden bg-gradient-to-br from-primary via-primary to-accent lg:flex lg:flex-col lg:justify-between lg:p-12">
+    <div className="flex min-h-screen w-full flex-col bg-bg lg:flex-row">
+      <div className="relative w-full overflow-hidden bg-gradient-to-br from-primary via-primary to-accent lg:w-1/2 lg:shrink-0 flex flex-col justify-between p-8 sm:p-12">
         <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 translate-x-1/3 translate-y-1/3 rounded-full bg-black/10 blur-3xl" />
         <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.16)_1px,transparent_1px)] [background-size:22px_22px]" />
@@ -58,7 +58,7 @@ export default function AuthShell({
         <p className="relative text-xs text-white/60">© {new Date().getFullYear()} PrepPilot</p>
       </div>
 
-      <div className="flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6">
+      <div className="flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:w-1/2">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-base font-black text-white">
