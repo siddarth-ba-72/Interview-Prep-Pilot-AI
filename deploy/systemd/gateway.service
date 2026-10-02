@@ -1,0 +1,16 @@
+[Unit]
+Description=PrepPilot Gateway Service
+After=network.target
+
+[Service]
+Type=simple
+User=preppilot
+WorkingDirectory=/preppilot/gateway/webapp
+ExecStart=/usr/bin/java -jar /preppilot/gateway/webapp/app.jar
+EnvironmentFile=/preppilot/gateway/.env
+Restart=always
+RestartSec=5
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

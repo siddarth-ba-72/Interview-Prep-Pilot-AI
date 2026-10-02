@@ -1,0 +1,20 @@
+name: Deploy - Gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "preppilot-backend/gateway/**"
+      - "preppilot-backend/cache-service/**"
+      - "preppilot-backend/build.gradle.kts"
+      - "preppilot-backend/settings.gradle.kts"
+      - ".github/workflows/deploy-gateway.yml"
+      - ".github/workflows/_deploy-service-reusable.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy-service-reusable.yml
+    with:
+      service_name: gateway
+    secrets: inherit

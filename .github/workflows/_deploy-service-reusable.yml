@@ -1,0 +1,117 @@
+name: Reusable - Build, Test & Deploy Backend Service
+
+# Shared logic used by the per-service caller workflows (deploy-gateway.yml,
+# deploy-user-service.yml, deploy-topic-service.yml). Keeping this in one
+# place avoids duplicating the build/deploy/rollback steps 3x.
+#
+# Expects the calling job to run inside a GitHub Environment
+# (production-gateway / production-user-service / production-topic-service)
+# that defines these secrets:
+#   EC2_HOST       - public IP or DNS of the target instance
+#   EC2_USERNAME   - ssh user (e.g. ubuntu)
+#   EC2_SSH_KEY    - private key matching authorized_keys on the instance
+#
+# EC2 instance layout expected (created once, manually, see deploy/README.md):
+#   /preppilot/<service_name>/webapp/app.jar   <- currently running jar
+#   /preppilot/<service_name>/backup/app.jar   <- previous jar, for rollback
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        description: "Gradle module / systemd unit name, e.g. gateway"
+        required: true
+        type: string
+    secrets:
+      EC2_HOST:
+        required: true
+      EC2_USERNAME:
+        required: true
+      EC2_SSH_KEY:
+        required: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Run tests
+        working-directory: preppilot-backend
+        run: ./gradlew :${{ inputs.service_name }}:test --no-daemon
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Build bootJar
+        working-directory: preppilot-backend
+        run: ./gradlew :${{ inputs.service_name }}:bootJar --no-daemon
+
+      - name: Rename jar for consistent deploy name
+        run: |
+          mkdir -p dist
+          cp preppilot-backend/${{ inputs.service_name }}/build/libs/*.jar dist/app.jar.new
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.service_name }}-jar
+          path: dist/app.jar.new
+          retention-days: 14
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production-${{ inputs.service_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.service_name }}-jar
+          path: dist
+
+      - name: Copy new jar to EC2 (webapp folder, staged as app.jar.new)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "dist/app.jar.new"
+          target: "/preppilot/${{ inputs.service_name }}/webapp"
+          strip_components: 1
+
+      - name: Backup current jar, promote new jar, restart service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            SERVICE="${{ inputs.service_name }}"
+            WEBAPP="/preppilot/$SERVICE/webapp"
+            BACKUP="/preppilot/$SERVICE/backup"
+
+            sudo systemctl stop "$SERVICE" || true
+
+            # Only back up if a previously running jar exists.
+            if [ -f "$WEBAPP/app.jar" ]; then
+              sudo cp "$WEBAPP/app.jar" "$BACKUP/app.jar"
+            fi
+
+            sudo mv "$WEBAPP/app.jar.new" "$WEBAPP/app.jar"
+
+            sudo systemctl start "$SERVICE"
+            sleep 5
+            sudo systemctl status "$SERVICE" --no-pager

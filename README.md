@@ -532,6 +532,97 @@ docker-compose up mongodb
 
 ---
 
+## CI/CD & Production Deployment (Backend Services)
+
+`gateway`, `user-service`, and `topic-service` are each deployed independently
+to their own AWS EC2 instance via GitHub Actions. `cache-service` is a shared
+library module (no `bootJar`) consumed by the other three — it is never
+deployed on its own, but changes to it trigger all three deploy pipelines
+since they depend on it.
+
+### Pipeline overview
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `.github/workflows/deploy-gateway.yml` | push to `main` touching `preppilot-backend/gateway/**` or `cache-service/**` | test → bootJar → deploy to gateway's EC2 instance |
+| `.github/workflows/deploy-user-service.yml` | push to `main` touching `preppilot-backend/user-service/**` or `cache-service/**` | test → bootJar → deploy to user-service's EC2 instance |
+| `.github/workflows/deploy-topic-service.yml` | push to `main` touching `preppilot-backend/topic-service/**` or `cache-service/**` | test → bootJar → deploy to topic-service's EC2 instance |
+| `.github/workflows/_deploy-service-reusable.yml` | called by the 3 workflows above | shared test/build/deploy logic (not run directly) |
+| `.github/workflows/rollback-service.yml` | manual (`workflow_dispatch`), pick a service | restores the last backup jar on that service's EC2 instance and restarts it |
+
+All three deploy workflows can also be triggered manually from the Actions
+tab (`workflow_dispatch`) without needing a code change.
+
+### What happens on each deploy
+
+1. `./gradlew :<service>:test` — fails the pipeline if tests fail, nothing is deployed.
+2. `./gradlew :<service>:bootJar` — builds the runnable Spring Boot jar.
+3. The jar is uploaded as a GitHub Actions build artifact, then `scp`'d to
+   `/preppilot/<service>/webapp/app.jar.new` on that service's EC2 instance.
+4. Over SSH, the instance:
+   - stops the systemd service,
+   - copies the **currently running** `webapp/app.jar` into `backup/app.jar` (so there's always exactly one previous good version on disk),
+   - promotes `app.jar.new` to `webapp/app.jar`,
+   - restarts the systemd service and prints its status.
+
+### EC2 instance layout (one per service)
+
+```
+/preppilot/<service>/webapp/app.jar   <- currently running jar
+/preppilot/<service>/backup/app.jar   <- previous jar (for rollback)
+/preppilot/<service>/.env             <- real runtime secrets, never committed
+/etc/systemd/system/<service>.service <- systemd unit, Restart=always
+```
+
+### One-time EC2 setup (per instance, done manually before first deploy)
+
+The `deploy/` folder at the repo root holds the assets for this manual
+bootstrap step. **GitHub Actions never reads from `deploy/`** — it only
+exists so you (a human) can provision each EC2 box once, after which all
+future deploys/rollbacks go entirely through the Actions workflows.
+
+```bash
+# from your local machine, for each service + its EC2 host:
+scp deploy/systemd/<service>.service deploy/systemd/setup-ec2.sh ec2-user@<host>:/tmp/
+ssh ec2-user@<host>
+cd /tmp && sudo ./setup-ec2.sh <service>
+# then fill in real secrets:
+sudo nano /preppilot/<service>/.env
+```
+
+`setup-ec2.sh <service>` creates the `preppilot` system user, the
+`webapp`/`backup` directories, an empty `.env`, and installs + enables the
+`<service>.service` systemd unit. Repeat for `gateway`, `user-service`, and
+`topic-service` on their respective instances.
+
+Also required once per instance: add the GitHub Actions deploy SSH **public**
+key to that instance's `~/.ssh/authorized_keys` (the matching **private** key
+goes into GitHub, see below — never committed to the repo).
+
+### Required GitHub configuration
+
+Create 3 GitHub **Environments**, each scoping its own secrets so the shared
+reusable workflow resolves `secrets.EC2_HOST` etc. to the right instance:
+
+| Environment | Secrets |
+|---|---|
+| `production-gateway` | `EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY` |
+| `production-user-service` | `EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY` |
+| `production-topic-service` | `EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY` |
+
+Environments also let you add required reviewers / manual approval gates per
+service before it deploys to production.
+
+### Emergency rollback
+
+Actions tab → **Rollback - Backend Service** → Run workflow → choose the
+service. This copies `backup/app.jar` back over `webapp/app.jar` and
+restarts the systemd service — no rebuild required.
+
+See `deploy/README.md` for the full reference.
+
+---
+
 ## Contributing
 
 ### Code Standards

@@ -1,0 +1,16 @@
+[Unit]
+Description=PrepPilot User Service
+After=network.target
+
+[Service]
+Type=simple
+User=preppilot
+WorkingDirectory=/preppilot/user-service/webapp
+ExecStart=/usr/bin/java -jar /preppilot/user-service/webapp/app.jar
+EnvironmentFile=/preppilot/user-service/.env
+Restart=always
+RestartSec=5
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target

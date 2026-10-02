@@ -1,0 +1,47 @@
+name: Rollback - Backend Service
+
+# Manual emergency rollback: swaps webapp/app.jar back to the last
+# known-good backup/app.jar on the target EC2 instance and restarts
+# the systemd service. No rebuild needed - the backup jar is already
+# on the box from the previous successful deploy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_name:
+        description: "Which service to roll back"
+        required: true
+        type: choice
+        options:
+          - gateway
+          - user-service
+          - topic-service
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production-${{ inputs.service_name }}
+    steps:
+      - name: Swap backup jar into webapp and restart
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            SERVICE="${{ inputs.service_name }}"
+            WEBAPP="/preppilot/$SERVICE/webapp"
+            BACKUP="/preppilot/$SERVICE/backup"
+
+            if [ ! -f "$BACKUP/app.jar" ]; then
+              echo "No backup jar found at $BACKUP/app.jar - cannot roll back." >&2
+              exit 1
+            fi
+
+            sudo systemctl stop "$SERVICE" || true
+            sudo cp "$WEBAPP/app.jar" "$WEBAPP/app.jar.rolledback" || true
+            sudo cp "$BACKUP/app.jar" "$WEBAPP/app.jar"
+            sudo systemctl start "$SERVICE"
+            sleep 5
+            sudo systemctl status "$SERVICE" --no-pager

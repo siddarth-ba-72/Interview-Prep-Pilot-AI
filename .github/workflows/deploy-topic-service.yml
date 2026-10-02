@@ -1,0 +1,20 @@
+name: Deploy - Topic Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "preppilot-backend/topic-service/**"
+      - "preppilot-backend/cache-service/**"
+      - "preppilot-backend/build.gradle.kts"
+      - "preppilot-backend/settings.gradle.kts"
+      - ".github/workflows/deploy-topic-service.yml"
+      - ".github/workflows/_deploy-service-reusable.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy-service-reusable.yml
+    with:
+      service_name: topic-service
+    secrets: inherit
