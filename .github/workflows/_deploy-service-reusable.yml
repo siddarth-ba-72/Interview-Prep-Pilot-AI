@@ -22,13 +22,21 @@ on:
         description: "Gradle module / systemd unit name, e.g. gateway"
         required: true
         type: string
+    # NOTE: these are intentionally NOT marked required: true. GitHub
+    # validates "required" secrets at workflow-call time, before the
+    # deploy job's `environment:` (set below) is applied - so an
+    # environment-scoped secret would always fail that early check even
+    # though it resolves correctly once the job's environment context is
+    # active. Leaving them optional here, with `secrets: inherit` at the
+    # caller + `environment:` on the deploy job, is the supported pattern
+    # for environment secrets in reusable workflows.
     secrets:
       EC2_HOST:
-        required: true
+        required: false
       EC2_USERNAME:
-        required: true
+        required: false
       EC2_SSH_KEY:
-        required: true
+        required: false
 
 jobs:
   test:
@@ -76,6 +84,21 @@ jobs:
     runs-on: ubuntu-latest
     environment: production-${{ inputs.service_name }}
     steps:
+      - name: Verify required environment secrets are set
+        run: |
+          missing=0
+          for name in EC2_HOST EC2_USERNAME EC2_SSH_KEY; do
+            if [ -z "${!name}" ]; then
+              echo "Missing secret: $name (set it on the 'production-${{ inputs.service_name }}' GitHub Environment)" >&2
+              missing=1
+            fi
+          done
+          exit $missing
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+
       - uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.service_name }}-jar
