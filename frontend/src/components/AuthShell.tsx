@@ -54,8 +54,6 @@ export default function AuthShell({
             ))}
           </div>
         </div>
-
-        <p className="relative text-xs text-white/60">© {new Date().getFullYear()} PrepPilot</p>
       </div>
 
       <div className="flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:w-1/2">

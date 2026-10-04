@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAppSelector } from './hooks'
 import { useSilentRefresh } from './features/auth/useSilentRefresh'
 import LoginPage from './pages/LoginPage'
@@ -13,6 +14,14 @@ import MockInterviewPage from './pages/MockInterviewPage'
 import MockInterviewHistoryPage from './pages/MockInterviewHistoryPage'
 import MockInterviewReportPage from './pages/MockInterviewReportPage'
 
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { accessToken, status } = useAppSelector((state) => state.auth)
   if (status === 'loading') return null
@@ -24,6 +33,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
