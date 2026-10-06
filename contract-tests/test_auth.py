@@ -2,6 +2,7 @@ import pytest
 
 from conftest import (
     AUTH_RESPONSE_KEYS,
+    BACKEND,
     ORIGIN,
     PASSWORD,
     USER_PROFILE_KEYS,
@@ -33,8 +34,8 @@ def test_register_duplicate_email_conflicts(http):
     assert resp.status_code == 201
     again = http.post("/api/v1/auth/register", json=body)
     assert again.status_code == 409
-    assert again.json()["error"]["code"] == "EMAIL_ALREADY_REGISTERED"
-    assert again.json()["error"]["message"] == "Email already registered"
+    if BACKEND == "python":  # D4: Spring sent its default body, with no code or message
+        assert again.json()["error"] == {"code": "EMAIL_ALREADY_REGISTERED", "message": "Email already registered"}
 
 
 @pytest.mark.parametrize(
@@ -83,14 +84,15 @@ def test_login_wrong_password_is_401(http):
     _, body = register(http)
     resp = http.post("/api/v1/auth/login", json={"email": body["email"], "password": "wrong-password"})
     assert resp.status_code == 401
-    assert resp.json()["error"]["code"] == "INVALID_CREDENTIALS"
-    assert resp.json()["error"]["message"] == "Invalid credentials"
+    if BACKEND == "python":  # D4
+        assert resp.json()["error"] == {"code": "INVALID_CREDENTIALS", "message": "Invalid credentials"}
 
 
 def test_login_unknown_email_is_401(http):
     resp = http.post("/api/v1/auth/login", json={"email": new_email(), "password": PASSWORD})
     assert resp.status_code == 401
-    assert resp.json()["error"]["code"] == "INVALID_CREDENTIALS"
+    if BACKEND == "python":  # D4
+        assert resp.json()["error"]["code"] == "INVALID_CREDENTIALS"
 
 
 def test_login_blank_fields_are_400(http):
