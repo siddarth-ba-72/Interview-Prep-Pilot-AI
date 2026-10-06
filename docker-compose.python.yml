@@ -1,0 +1,73 @@
+name: preppilot-py
+
+x-health: &health
+  interval: 10s
+  timeout: 3s
+  retries: 12
+  start_period: 10s
+
+services:
+  mongodb:
+    image: mongo:7.0
+    ports: ["27017:27017"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-change_me}
+    volumes: ["mongo_data:/data/db"]
+    healthcheck:
+      <<: *health
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+
+  ai-service:
+    build: ./ai-service
+    env_file: ./ai-service/.env
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+
+  user-service:
+    build: ./user-service
+    env_file: ./user-service/.env
+    environment:
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-change_me}@mongodb:27017/?authSource=admin
+    depends_on:
+      mongodb: { condition: service_healthy }
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8081/health')"]
+
+  topic-service:
+    build: ./topic-service
+    env_file: ./topic-service/.env
+    environment:
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-change_me}@mongodb:27017/?authSource=admin
+      AI_SERVICE_URL: http://ai-service:8000
+    depends_on:
+      mongodb: { condition: service_healthy }
+      ai-service: { condition: service_healthy }
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/health')"]
+
+  gateway:                         # this name is required: frontend/nginx.conf proxies to http://gateway:8080
+    build: ./gateway
+    env_file: ./gateway/.env
+    environment:
+      USER_SERVICE_URL: http://user-service:8081
+      TOPIC_SERVICE_URL: http://topic-service:8082
+    ports: ["8080:8080"]
+    depends_on:
+      user-service: { condition: service_healthy }
+      topic-service: { condition: service_healthy }
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+
+  frontend:
+    build: ./frontend
+    ports: ["3000:80"]
+    depends_on:
+      gateway: { condition: service_healthy }   # nginx fails to start if it can't resolve "gateway"
+
+volumes:
+  mongo_data:
