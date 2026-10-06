@@ -126,11 +126,85 @@ class FakeTestAi:
         return [json.loads(c.request.content) for c in self.evaluate_route.calls]
 
 
+AI_PLAN_URL = f"{AI_URL}/ai/interview/plan"
+AI_TURN_URL = f"{AI_URL}/ai/interview/next-turn"
+AI_REPORT_URL = f"{AI_URL}/ai/interview/generate-report"
+
+
+class FakeInterviewAi:
+    """Stands in for ai-service's /ai/interview/* endpoints."""
+
+    def __init__(self, router: respx.MockRouter) -> None:
+        self.themes = ["Beans", "Security", "Testing"]
+        self.rating = "STRONG"
+        self.advance = True  # whether the scripted next turn asks to advance the theme
+        self.plan_response: httpx.Response | None = None
+        self.turn_response: httpx.Response | None = None
+        self.report_response: httpx.Response | None = None
+        self.plan_error: Exception | None = None
+        self.turn_error: Exception | None = None
+        self.report_error: Exception | None = None
+        self.plan_route = router.post(AI_PLAN_URL).mock(side_effect=self._plan)
+        self.turn_route = router.post(AI_TURN_URL).mock(side_effect=self._turn)
+        self.report_route = router.post(AI_REPORT_URL).mock(side_effect=self._report)
+
+    def _plan(self, request: httpx.Request) -> httpx.Response:
+        if self.plan_error:
+            raise self.plan_error
+        return self.plan_response or httpx.Response(200, json={"themes": self.themes})
+
+    def _turn(self, request: httpx.Request) -> httpx.Response:
+        if self.turn_error:
+            raise self.turn_error
+        if self.turn_response:
+            return self.turn_response
+        body = json.loads(request.content)
+        if body["lastAnswer"] is None:  # the opening question
+            return httpx.Response(
+                200,
+                json={"evaluation": None, "next": {"question": "Opening question?", "theme": body["themePlan"][0],
+                                                   "isFollowUp": False, "advanceTheme": False}},
+            )
+        plan, index = body["themePlan"], body["currentThemeIndex"]
+        theme = plan[min(index + 1, len(plan) - 1)] if self.advance else plan[index]
+        return httpx.Response(
+            200,
+            json={
+                "evaluation": {"rating": self.rating, "feedback": f"Feedback on: {body['lastAnswer'][:20]}"},
+                "next": {"question": f"Question after {len(body['priorExchanges']) + 1}?", "theme": theme,
+                         "isFollowUp": not self.advance, "advanceTheme": self.advance},
+            },
+        )
+
+    def _report(self, request: httpx.Request) -> httpx.Response:
+        if self.report_error:
+            raise self.report_error
+        return self.report_response or httpx.Response(
+            200,
+            json={"strengths": ["Clear explanations"], "weaknesses": ["Edge cases"], "overallSummary": "A decent run.",
+                  "improvementSuggestions": [{"question": "Q", "userAnswer": "A", "theme": "Beans",
+                                              "betterAnswer": "A fuller answer"}]},
+        )
+
+    @property
+    def plan_calls(self) -> list[dict]:
+        return [json.loads(c.request.content) for c in self.plan_route.calls]
+
+    @property
+    def turn_calls(self) -> list[dict]:
+        return [json.loads(c.request.content) for c in self.turn_route.calls]
+
+    @property
+    def report_calls(self) -> list[dict]:
+        return [json.loads(c.request.content) for c in self.report_route.calls]
+
+
 class FakeAiService:
     """Stands in for ai-service: records requests and streams a scripted answer."""
 
     def __init__(self, router: respx.MockRouter) -> None:
         self.tests = FakeTestAi(router)
+        self.interviews = FakeInterviewAi(router)
         self.tokens = ["Hello", " world"]
         self.status = 200
         self.error = None  # exception to raise instead of answering

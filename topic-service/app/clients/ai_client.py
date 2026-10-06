@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -6,7 +7,17 @@ from http import HTTPStatus
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from app.clients.ai_schemas import EvaluateAnswersResponse, GenerateTestResponse
+from app.clients.ai_schemas import (
+    EvaluateAnswersResponse,
+    GenerateInterviewReportRequest,
+    GenerateInterviewReportResponse,
+    GenerateTestResponse,
+    NextTurnRequest,
+    NextTurnResponse,
+    PlanInterviewRequest,
+    PlanInterviewResponse,
+    ReportExchange,
+)
 from app.errors import ErrorCode, api_error
 from app.logging_config import request_id_context
 
@@ -14,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 STREAM_TIMEOUT = httpx.Timeout(connect=5, read=90, write=30, pool=5)  # read = max silence between chunks
 TEST_TIMEOUT = httpx.Timeout(connect=5, read=180, write=30, pool=5)  # generating/evaluating a whole test is slow
+INTERVIEW_HTTP_TIMEOUT = httpx.Timeout(connect=5, read=90, write=30, pool=5)
+INTERVIEW_CALL_TIMEOUT = 90  # seconds for the whole call, retry included: it is user-facing, so never hang
 
 
 def status_text(code: int) -> str:
@@ -125,6 +138,72 @@ class AiClient:
         except ValueError:
             logger.error("AI service returned a non-JSON body", extra={"path": path, "topic": topic_name})
             raise api_error(ErrorCode.AI_SERVICE_ERROR, "AI Service returned an invalid response") from None
+
+    # ---------- Mock Interview ----------
+    # Callers fall back to deterministic behaviour on any failure here, so these simply raise.
+
+    async def plan_interview(
+        self, topic_name: str, experience_level: str, difficulty: str, duration_minutes: int
+    ) -> PlanInterviewResponse:
+        request = PlanInterviewRequest(
+            topic_name=topic_name,
+            experience_level=experience_level,
+            difficulty=difficulty,
+            duration_minutes=duration_minutes,
+        )
+        return await self._post_interview("/ai/interview/plan", request, PlanInterviewResponse)
+
+    async def next_turn(self, request: NextTurnRequest) -> NextTurnResponse:
+        return await self._post_interview("/ai/interview/next-turn", request, NextTurnResponse)
+
+    async def generate_interview_report(
+        self, topic_name: str, experience_level: str, difficulty: str, exchanges: list[ReportExchange]
+    ) -> GenerateInterviewReportResponse:
+        request = GenerateInterviewReportRequest(
+            topic_name=topic_name, experience_level=experience_level, difficulty=difficulty, exchanges=exchanges
+        )
+        return await self._post_interview("/ai/interview/generate-report", request, GenerateInterviewReportResponse)
+
+    async def _post_interview[T: BaseModel](self, path: str, request: BaseModel, response_model: type[T]) -> T:
+        payload = request.model_dump(by_alias=True)
+        try:
+            async with asyncio.timeout(INTERVIEW_CALL_TIMEOUT):
+                response = await self._post_retrying_connect_failures(path, payload)
+        except TimeoutError:
+            logger.error("AI call timed out", extra={"path": path})
+            raise api_error(ErrorCode.AI_SERVICE_UNAVAILABLE) from None
+        except httpx.HTTPError as exc:
+            logger.error("AI service unreachable", extra={"path": path, "error": type(exc).__name__})
+            raise api_error(ErrorCode.AI_SERVICE_UNAVAILABLE) from exc
+
+        body = response.text
+        if response.status_code == 400:
+            message = "Invalid AI request" + (f": {body}" if body else "")
+            logger.error(message, extra={"endpoint": path})
+            raise api_error(ErrorCode.AI_INVALID_REQUEST, message)
+        if not response.is_success:
+            message = f"AI Service error: {status_text(response.status_code)}" + (f" - {body}" if body else "")
+            logger.error(message, extra={"endpoint": path})
+            raise api_error(ErrorCode.AI_SERVICE_ERROR, message)
+        try:
+            data = response.json()
+        except ValueError:
+            raise api_error(ErrorCode.AI_SERVICE_ERROR, "AI Service returned an invalid response") from None
+        return _parse(response_model, data)
+
+    async def _post_retrying_connect_failures(self, path: str, payload: dict) -> httpx.Response:
+        """One retry, and only when the connection itself failed: malformed-output retries live in ai-service,
+        where the bad output can be fed back for repair. Retrying a slow call here would only multiply latency."""
+        for attempt in (1, 2):
+            try:
+                return await self.http.post(
+                    f"{self.base_url}{path}", json=payload, headers=self._headers(), timeout=INTERVIEW_HTTP_TIMEOUT
+                )
+            except (httpx.ConnectError, httpx.ConnectTimeout):
+                if attempt == 2:
+                    raise
+                logger.warning("Could not reach the AI service, retrying once", extra={"path": path})
+        raise AssertionError("unreachable")
 
 
 def _error_detail(response: httpx.Response) -> str:

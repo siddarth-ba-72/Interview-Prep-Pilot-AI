@@ -107,5 +107,9 @@ def chat_session_not_found(topic_id: str) -> ApiError:
     )
 
 
+def mock_interview_not_found(session_id: str) -> ApiError:
+    return api_error(ErrorCode.MOCK_INTERVIEW_NOT_FOUND, f"No mock interview session found with id: {session_id}")
+
+
 def duplicate_topic(name: str) -> ApiError:
     return api_error(ErrorCode.DUPLICATE_TOPIC, f"Topic already exists: {name}")

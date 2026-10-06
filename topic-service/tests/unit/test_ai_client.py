@@ -1,10 +1,13 @@
+import asyncio
 import json
 
 import httpx
 import pytest
 import respx
 
+from app.clients import ai_client as ai_client_module
 from app.clients.ai_client import AiClient, AiStreamError, AiUnavailableError
+from app.clients.ai_schemas import NextTurnExchange, NextTurnQuestionContext, NextTurnRequest, ReportExchange
 from app.errors import ApiError
 from app.logging_config import request_id_context
 
@@ -273,3 +276,151 @@ async def test_a_sparse_response_parses_with_every_field_optional(client):
     respx.post(EVALUATE_URL).mock(return_value=httpx.Response(200, json={}))
     result = await client.evaluate_answers("K", [])
     assert result.per_question is None and result.strengths is None
+
+
+# ---------- Mock Interview calls ----------
+
+
+
+PLAN_URL = "http://ai.test/ai/interview/plan"
+TURN_URL = "http://ai.test/ai/interview/next-turn"
+REPORT_URL = "http://ai.test/ai/interview/generate-report"
+
+
+def a_turn_request() -> NextTurnRequest:
+    return NextTurnRequest(
+        topic_name="Kafka", experience_level="SENIOR", difficulty="HARD", theme_plan=["A", "B"],
+        current_theme_index=1, current_follow_up_count=2, remaining_seconds=600,
+        prior_exchanges=[NextTurnExchange(question="Q1", user_answer="A1", theme="A", is_follow_up=False,
+                                          rating="STRONG")],
+        last_answer="ans",
+        current_question=NextTurnQuestionContext(question="Q2", theme="B", is_follow_up=True),
+        must_advance_theme=False, max_follow_ups=4,
+    )
+
+
+@respx.mock
+async def test_plan_interview_request_and_response(client):
+    route = respx.post(PLAN_URL).mock(return_value=httpx.Response(200, json={"themes": ["A", "B"]}))
+    token = request_id_context.set("req-1")
+    try:
+        result = await client.plan_interview("Kafka", "SENIOR", "HARD", 45)
+    finally:
+        request_id_context.reset(token)
+    request = route.calls.last.request
+    assert json.loads(request.content) == {
+        "topicName": "Kafka", "experienceLevel": "SENIOR", "difficulty": "HARD", "durationMinutes": 45,
+    }
+    assert request.headers["x-internal-api-key"] == KEY and request.headers["x-request-id"] == "req-1"
+    assert result.themes == ["A", "B"]
+
+
+@respx.mock
+async def test_next_turn_request_and_response(client):
+    route = respx.post(TURN_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={"evaluation": {"rating": "STRONG", "feedback": "good"},
+                  "next": {"question": "Next?", "theme": "B", "isFollowUp": True, "advanceTheme": False}},
+        )
+    )
+    result = await client.next_turn(a_turn_request())
+    sent = json.loads(route.calls.last.request.content)
+    assert sent["currentQuestion"] == {"question": "Q2", "theme": "B", "isFollowUp": True}
+    assert sent["priorExchanges"][0]["isFollowUp"] is False and sent["mustAdvanceTheme"] is False
+    assert sent["lastAnswer"] == "ans" and sent["maxFollowUps"] == 4 and sent["remainingSeconds"] == 600
+    assert result.next.is_follow_up is True and result.next.advance_theme is False
+    assert result.evaluation.rating == "STRONG"
+
+
+@respx.mock
+async def test_generate_interview_report_request_and_response(client):
+    route = respx.post(REPORT_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={"strengths": ["s"], "weaknesses": ["w"], "overallSummary": "sum",
+                  "improvementSuggestions": [{"question": "Q", "userAnswer": "A", "theme": "T", "betterAnswer": "B"}]},
+        )
+    )
+    exchanges = [ReportExchange(question="Q", user_answer="A", theme="T", rating="WEAK")]
+    result = await client.generate_interview_report("Kafka", "SENIOR", "HARD", exchanges)
+    assert json.loads(route.calls.last.request.content) == {
+        "topicName": "Kafka", "experienceLevel": "SENIOR", "difficulty": "HARD",
+        "exchanges": [{"question": "Q", "userAnswer": "A", "theme": "T", "rating": "WEAK"}],
+    }
+    assert result.overall_summary == "sum" and result.improvement_suggestions[0].better_answer == "B"
+
+
+@respx.mock
+async def test_interview_400_message_format(client):
+    respx.post(TURN_URL).mock(return_value=httpx.Response(400, text="bad turn"))
+    with pytest.raises(ApiError) as exc:
+        await client.next_turn(a_turn_request())
+    assert (exc.value.status_code, exc.value.code, exc.value.message) == (400, "AI_INVALID_REQUEST",
+                                                                          "Invalid AI request: bad turn")
+
+
+@respx.mock
+async def test_interview_400_without_a_body(client):
+    respx.post(TURN_URL).mock(return_value=httpx.Response(400))
+    with pytest.raises(ApiError) as exc:
+        await client.next_turn(a_turn_request())
+    assert exc.value.message == "Invalid AI request"
+
+
+@respx.mock
+async def test_interview_non_2xx_message_format(client):
+    respx.post(PLAN_URL).mock(return_value=httpx.Response(503, text="overloaded"))
+    with pytest.raises(ApiError) as exc:
+        await client.plan_interview("K", "SENIOR", "EASY", 30)
+    assert (exc.value.status_code, exc.value.code) == (502, "AI_SERVICE_ERROR")
+    assert exc.value.message == "AI Service error: 503 SERVICE_UNAVAILABLE - overloaded"
+
+
+@respx.mock
+async def test_a_connect_failure_is_retried_once_and_can_recover(client):
+    route = respx.post(PLAN_URL).mock(
+        side_effect=[httpx.ConnectError("refused"), httpx.Response(200, json={"themes": ["A"]})]
+    )
+    assert (await client.plan_interview("K", "SENIOR", "EASY", 30)).themes == ["A"]
+    assert route.call_count == 2
+
+
+@respx.mock
+async def test_two_connect_failures_give_up(client):
+    route = respx.post(PLAN_URL).mock(side_effect=httpx.ConnectError("refused"))
+    with pytest.raises(ApiError) as exc:
+        await client.plan_interview("K", "SENIOR", "EASY", 30)
+    assert exc.value.code == "AI_SERVICE_UNAVAILABLE" and route.call_count == 2
+
+
+@pytest.mark.parametrize("error", [httpx.ReadTimeout("slow"), httpx.RemoteProtocolError("reset")])
+@respx.mock
+async def test_other_failures_are_not_retried(client, error):
+    route = respx.post(TURN_URL).mock(side_effect=error)
+    with pytest.raises(ApiError) as exc:
+        await client.next_turn(a_turn_request())
+    assert exc.value.code == "AI_SERVICE_UNAVAILABLE" and route.call_count == 1
+
+
+@respx.mock
+async def test_the_whole_call_has_a_hard_ceiling(client, monkeypatch):
+    monkeypatch.setattr(ai_client_module, "INTERVIEW_CALL_TIMEOUT", 0.05)
+
+    async def hang(request):
+        await asyncio.sleep(2)
+        return httpx.Response(200, json={})
+
+    respx.post(TURN_URL).mock(side_effect=hang)
+    with pytest.raises(ApiError) as exc:
+        await client.next_turn(a_turn_request())
+    assert (exc.value.status_code, exc.value.code) == (502, "AI_SERVICE_UNAVAILABLE")
+
+
+@pytest.mark.parametrize("body", ["not json", "null", "[]", '{"themes": "x"}'])
+@respx.mock
+async def test_unusable_interview_bodies_are_ai_errors(client, body):
+    respx.post(PLAN_URL).mock(return_value=httpx.Response(200, text=body))
+    with pytest.raises(ApiError) as exc:
+        await client.plan_interview("K", "SENIOR", "EASY", 30)
+    assert exc.value.code == "AI_SERVICE_ERROR"

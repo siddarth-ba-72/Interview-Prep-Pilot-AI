@@ -3,6 +3,7 @@ from fastapi import Request
 from app.errors import ApiError
 from app.logging_config import user_id_context
 from app.services.chat_service import ChatService
+from app.services.mock_interview_service import MockInterviewService
 from app.services.test_service import TestService
 from app.services.topic_service import TopicService
 
@@ -27,3 +28,7 @@ def get_chat_service(request: Request) -> ChatService:
 
 def get_test_service(request: Request) -> TestService:
     return request.app.state.test_service
+
+
+def get_interview_service(request: Request) -> MockInterviewService:
+    return request.app.state.interview_service
