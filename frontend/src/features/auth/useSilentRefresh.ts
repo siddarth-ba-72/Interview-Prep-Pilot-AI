@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useAppDispatch } from '../../hooks'
 import { setCredentials, setLoading, clearCredentials } from './authSlice'
-import api from '../../api/axiosInstance'
+import { refreshSession } from '../../api/refreshSession'
 
 /**
  * On app startup, attempt a silent refresh to recover the session
@@ -12,11 +12,8 @@ export function useSilentRefresh() {
 
   useEffect(() => {
     dispatch(setLoading())
-    api
-      .post('/auth/refresh')
-      .then((
-        { data }: { data: { user: { id: string; email: string; displayName: string }; accessToken: string } }
-      ) => {
+    refreshSession()
+      .then((data) => {
         dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
       })
       .catch(() => {

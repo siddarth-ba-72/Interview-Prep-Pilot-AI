@@ -34,5 +34,6 @@ public class RefreshToken {
     public String getUserId() { return userId; }
     public String getTokenHash() { return tokenHash; }
     public Instant getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
     public Instant getCreatedAt() { return createdAt; }
 }

@@ -2,6 +2,7 @@ import axios from 'axios'
 import { store } from '../store'
 import { setCredentials, clearCredentials } from '../features/auth/authSlice'
 import { getApiBaseUrl } from './config'
+import { refreshSession } from './refreshSession'
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
@@ -18,8 +19,6 @@ api.interceptors.request.use((config) => {
 })
 
 // Silent refresh on 401
-let isRefreshing = false
-
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -27,12 +26,11 @@ api.interceptors.response.use(
 
     const isRefreshCall = original.url?.includes('/auth/refresh')
 
-    if (error.response?.status === 401 && !original._retry && !isRefreshing && !isRefreshCall) {
+    if (error.response?.status === 401 && !original._retry && !isRefreshCall) {
       original._retry = true
-      isRefreshing = true
 
       try {
-        const { data } = await axios.post(`${getApiBaseUrl()}/auth/refresh`, {}, { withCredentials: true })
+        const data = await refreshSession()
         store.dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
         original.headers.Authorization = `Bearer ${data.accessToken}`
         return api(original)
@@ -42,8 +40,6 @@ api.interceptors.response.use(
           window.location.href = '/login'
         }
         return Promise.reject(error)
-      } finally {
-        isRefreshing = false
       }
     }
 

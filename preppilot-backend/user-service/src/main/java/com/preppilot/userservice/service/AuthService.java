@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
@@ -25,6 +26,11 @@ import java.util.UUID;
 
 @Service
 public class AuthService {
+
+    // How long a refresh token stays usable after it has been rotated out. Covers a
+    // refresh response that never reached the browser (e.g. the page was reloaded
+    // mid-request), which would otherwise leave the client holding a dead token.
+    private static final Duration ROTATION_GRACE = Duration.ofSeconds(60);
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -79,8 +85,13 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired");
         }
 
-        // Token rotation: delete old before issuing new
-        refreshTokenRepository.delete(stored);
+        // Token rotation: retire the old token after a short grace window rather than
+        // deleting it, so a lost response or concurrent refresh doesn't log the user out
+        Instant graceEnd = Instant.now().plus(ROTATION_GRACE);
+        if (stored.getExpiresAt().isAfter(graceEnd)) {
+            stored.setExpiresAt(graceEnd);
+            refreshTokenRepository.save(stored);
+        }
 
         User user = userRepository.findById(stored.getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));

@@ -1,8 +1,8 @@
 import { fetchEventSource } from '@microsoft/fetch-event-source'
-import axios from 'axios'
 import { store } from '../store'
 import { setCredentials, clearCredentials } from '../features/auth/authSlice'
 import { getApiBaseUrl } from './config'
+import { refreshSession } from './refreshSession'
 
 export type StreamEvent = { type: 'token'; token: string } | { type: 'error'; message: string } | { type: 'done' }
 
@@ -15,7 +15,7 @@ class NeedsRefresh extends Error {}
 
 async function refreshAccessToken(): Promise<string | null> {
   try {
-    const { data } = await axios.post(`${getApiBaseUrl()}/auth/refresh`, {}, { withCredentials: true })
+    const data = await refreshSession()
     store.dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
     return data.accessToken
   } catch {
