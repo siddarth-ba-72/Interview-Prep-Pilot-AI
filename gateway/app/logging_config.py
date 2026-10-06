@@ -56,6 +56,8 @@ def setup_structured_logging(service: str, level: str = "INFO") -> None:
         uv.handlers = [handler]
         uv.propagate = False
         uv.setLevel(logging.WARNING)
+    # httpx logs every outbound request at INFO; the proxy and AI client would drown the real logs.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 class RequestIdMiddleware:
