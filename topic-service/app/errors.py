@@ -1,4 +1,5 @@
 import logging
+from enum import Enum
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -47,3 +48,64 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def unhandled(_: Request, exc: Exception) -> JSONResponse:
         logger.exception("Unhandled error")
         return error_response(500, "SYSTEM_INTERNAL_ERROR", "Internal server error")
+
+
+class ErrorCode(Enum):
+    """Port of Java's ErrorCode plus the ad-hoc string codes the Java services used and the D3 additions.
+
+    Each member is (HTTP status, default message).
+    """
+
+    USER_INVALID_INPUT = (400, "Invalid input provided")
+    USER_INVALID_TOPIC = (400, "Invalid topic provided")
+    USER_INVALID_CONFIG = (400, "Invalid configuration")
+    USER_UNAUTHORIZED = (401, "Unauthorized access")
+
+    TOPIC_NOT_FOUND = (404, "Topic not found")
+    CHAT_SESSION_NOT_FOUND = (404, "Chat session not found")
+    MOCK_INTERVIEW_NOT_FOUND = (404, "Mock interview not found")
+
+    AI_SERVICE_ERROR = (502, "AI service error")
+    AI_INVALID_REQUEST = (400, "Invalid request for AI service")
+    AI_SERVICE_UNAVAILABLE = (502, "AI service temporarily unavailable")
+
+    SYSTEM_INTERNAL_ERROR = (500, "Internal server error")
+    STREAMING_ERROR = (500, "Error during streaming operation")
+
+    # Ad-hoc codes the Java services raised as plain strings
+    DUPLICATE_TOPIC = (409, "Topic already exists")
+    INVALID_INTERVIEW_CONFIG = (400, "Invalid interview configuration")
+    INTERVIEW_ALREADY_COMPLETED = (409, "This interview has already been completed.")
+    NO_ACTIVE_QUESTION = (409, "There is no question awaiting an answer on this interview.")
+    INTERVIEW_NOT_COMPLETED = (409, "This interview is still in progress - no report has been generated yet.")
+
+    # New in this port (deviation D3): Java answered these with a generic 500
+    TEST_NOT_FOUND = (404, "Test not found")
+    TEST_ALREADY_COMPLETED = (409, "This test has already been submitted.")
+    TEST_REPORT_NOT_FOUND = (404, "Test report not found")
+
+    @property
+    def status(self) -> int:
+        return self.value[0]
+
+    @property
+    def default_message(self) -> str:
+        return self.value[1]
+
+
+def api_error(code: ErrorCode, message: str | None = None) -> ApiError:
+    return ApiError(code.status, code.name, message if message is not None else code.default_message)
+
+
+def topic_not_found(topic_id: str) -> ApiError:
+    return api_error(ErrorCode.TOPIC_NOT_FOUND, f"Topic not found: {topic_id}")
+
+
+def chat_session_not_found(topic_id: str) -> ApiError:
+    return api_error(
+        ErrorCode.CHAT_SESSION_NOT_FOUND, f"No chat session found for topic: {topic_id}. Open Learn Mode first."
+    )
+
+
+def duplicate_topic(name: str) -> ApiError:
+    return api_error(ErrorCode.DUPLICATE_TOPIC, f"Topic already exists: {name}")
