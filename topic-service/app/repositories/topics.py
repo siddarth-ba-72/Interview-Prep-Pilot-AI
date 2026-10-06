@@ -1,6 +1,7 @@
 import re
 
 from bson import ObjectId
+from pymongo import ReturnDocument
 from pymongo.asynchronous.collection import AsyncCollection
 
 from app.models.topic import Topic
@@ -48,3 +49,34 @@ class TopicsRepository:
     async def delete_by_id_and_user(self, topic_id: str, user_id: str) -> None:
         if ObjectId.is_valid(topic_id):
             await self.collection.delete_one({"_id": ObjectId(topic_id), "userId": user_id})
+
+    async def record_test_score(self, topic_id: str, raw_score: int) -> Topic | None:
+        """Bump testCount and fold the score into the running average in one atomic update (deviation D5).
+
+        Java read the topic, changed it in memory and saved it back, so two concurrent submits could lose one.
+        The score is a float literal so avgScore is always stored as a BSON double.
+        """
+        score = float(raw_score)
+        pipeline = [
+            {"$set": {"testCount": {"$add": [{"$ifNull": ["$testCount", 0]}, 1]}}},
+            {
+                "$set": {
+                    "avgScore": {
+                        "$cond": [
+                            {"$eq": [{"$ifNull": ["$avgScore", None]}, None]},
+                            score,
+                            {
+                                "$divide": [
+                                    {"$add": [{"$multiply": ["$avgScore", {"$subtract": ["$testCount", 1]}]}, score]},
+                                    "$testCount",
+                                ]
+                            },
+                        ]
+                    }
+                }
+            },
+        ]
+        doc = await self.collection.find_one_and_update(
+            {"_id": ObjectId(topic_id)}, pipeline, return_document=ReturnDocument.AFTER
+        )
+        return _from_doc(doc)

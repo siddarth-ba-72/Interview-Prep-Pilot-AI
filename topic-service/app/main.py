@@ -11,9 +11,12 @@ from app.db import create_client, ensure_index
 from app.errors import register_exception_handlers
 from app.logging_config import RequestIdMiddleware, setup_structured_logging
 from app.repositories.chat_sessions import ChatSessionsRepository
+from app.repositories.test_reports import TestReportsRepository
+from app.repositories.test_sessions import TestSessionsRepository
 from app.repositories.topics import TopicsRepository
-from app.routers import chat, topics
+from app.routers import chat, tests, topics
 from app.services.chat_service import ChatService
+from app.services.test_service import TestService
 from app.services.topic_service import TopicService
 
 setup_structured_logging("topic-service", settings.log_level)
@@ -45,6 +48,9 @@ async def lifespan(app: FastAPI):
     app.state.http = http
     app.state.topic_service = TopicService(topics_repo, chats_repo)
     app.state.chat_service = ChatService(topics_repo, chats_repo, ai)
+    app.state.test_service = TestService(
+        topics_repo, TestSessionsRepository(db.test_sessions), TestReportsRepository(db.test_reports), ai
+    )
     yield
     await app.state.chat_service.shutdown()  # in-flight answers get saved before Mongo closes
     await http.aclose()
@@ -57,6 +63,7 @@ register_exception_handlers(app)
 app.add_middleware(RequestIdMiddleware)
 app.include_router(topics.router)
 app.include_router(chat.router)
+app.include_router(tests.router)
 
 
 @app.get("/health")

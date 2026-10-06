@@ -61,10 +61,76 @@ def client(mongo_uri, db_name, raw_db):
             yield test_client
 
 
+AI_GENERATE_URL = f"{AI_URL}/ai/test/generate"
+AI_EVALUATE_URL = f"{AI_URL}/ai/test/evaluate"
+
+
+def make_questions(mcq: int = 4, subjective: int = 2) -> list[dict]:
+    """Questions as ai-service returns them: with the reference answers included."""
+    questions = [
+        {"questionId": f"mcq-{i}", "section": "MCQ", "text": f"MCQ {i}?", "options": ["A", "B", "C", "D"],
+         "correctOption": "B", "modelAnswer": None}
+        for i in range(mcq)
+    ]
+    questions += [
+        {"questionId": f"sub-{i}", "section": "SUBJECTIVE", "text": f"Explain {i}", "options": None,
+         "correctOption": None, "modelAnswer": f"model answer {i}"}
+        for i in range(subjective)
+    ]
+    return questions
+
+
+class FakeTestAi:
+    """Stands in for ai-service's /ai/test/* endpoints."""
+
+    def __init__(self, router: respx.MockRouter) -> None:
+        self.questions = make_questions()
+        self.correct: set[str] | None = None  # None = every answered question is right
+        self.strengths = ["Basics"]
+        self.weaknesses = ["Internals"]
+        self.generate_response: httpx.Response | None = None  # overrides the scripted answer
+        self.evaluate_response: httpx.Response | None = None
+        self.generate_error: Exception | None = None
+        self.evaluate_error: Exception | None = None
+        self.drop: set[str] = set()
+        self.generate_route = router.post(AI_GENERATE_URL).mock(side_effect=self._generate)
+        self.evaluate_route = router.post(AI_EVALUATE_URL).mock(side_effect=self._evaluate)
+
+    def _generate(self, request: httpx.Request) -> httpx.Response:
+        if self.generate_error:
+            raise self.generate_error
+        return self.generate_response or httpx.Response(200, json={"questions": self.questions})
+
+    def _evaluate(self, request: httpx.Request) -> httpx.Response:
+        if self.evaluate_error:
+            raise self.evaluate_error
+        if self.evaluate_response:
+            return self.evaluate_response
+        answers = json.loads(request.content)["answers"]
+        per_question = [
+            {"questionId": a["questionId"], "isCorrect": self.correct is None or a["questionId"] in self.correct,
+             "evaluation": f"feedback for {a['questionId']}"}
+            for a in answers
+            if a["questionId"] not in self.drop
+        ]
+        return httpx.Response(
+            200, json={"perQuestion": per_question, "strengths": self.strengths, "weaknesses": self.weaknesses}
+        )
+
+    @property
+    def generate_calls(self) -> list[dict]:
+        return [json.loads(c.request.content) for c in self.generate_route.calls]
+
+    @property
+    def evaluate_calls(self) -> list[dict]:
+        return [json.loads(c.request.content) for c in self.evaluate_route.calls]
+
+
 class FakeAiService:
     """Stands in for ai-service: records requests and streams a scripted answer."""
 
     def __init__(self, router: respx.MockRouter) -> None:
+        self.tests = FakeTestAi(router)
         self.tokens = ["Hello", " world"]
         self.status = 200
         self.error = None  # exception to raise instead of answering

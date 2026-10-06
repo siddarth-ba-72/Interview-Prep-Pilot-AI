@@ -81,8 +81,8 @@ class ErrorCode(Enum):
 
     # New in this port (deviation D3): Java answered these with a generic 500
     TEST_NOT_FOUND = (404, "Test not found")
-    TEST_ALREADY_COMPLETED = (409, "This test has already been submitted.")
-    TEST_REPORT_NOT_FOUND = (404, "Test report not found")
+    TEST_ALREADY_COMPLETED = (409, "Test is already completed")
+    TEST_REPORT_NOT_FOUND = (404, "Report not found")
 
     @property
     def status(self) -> int:
