@@ -31,7 +31,7 @@ spring:
         - id: topic-routes
           uri: ${prep-pilot.topic-service-url}
           predicates:
-            - Path=/api/v1/topics/**,/api/v1/sessions/**,/api/v1/reports/**
+            - Path=/api/v1/topics/**,/api/v1/sessions/**,/api/v1/reports/**,/api/v1/usage/**
         - id: ai-routes
           uri: ${prep-pilot.ai-service-url}
           predicates:

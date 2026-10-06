@@ -16,17 +16,22 @@ public class TopicService {
 
     private final TopicRepository topicRepository;
     private final ChatSessionService chatSessionService;
+    private final UsageLimitService usageLimitService;
 
-    public TopicService(TopicRepository topicRepository, ChatSessionService chatSessionService) {
+    public TopicService(TopicRepository topicRepository, ChatSessionService chatSessionService,
+                        UsageLimitService usageLimitService) {
         this.topicRepository = topicRepository;
         this.chatSessionService = chatSessionService;
+        this.usageLimitService = usageLimitService;
     }
 
+    /** {@code experienceLevel} is the user's onboarding answer; it decides their topic limit. */
     @CacheEvict(value = "topics", key = "#userId")
-    public TopicResponse create(String userId, String name) {
+    public TopicResponse create(String userId, String name, String experienceLevel) {
         if (topicRepository.existsByUserIdAndNameIgnoreCase(userId, name)) {
             throw new DuplicateTopicException(name);
         }
+        usageLimitService.checkCanCreateTopic(userId, experienceLevel);
         Topic saved = topicRepository.save(new Topic(userId, name));
         return toResponse(saved);
     }

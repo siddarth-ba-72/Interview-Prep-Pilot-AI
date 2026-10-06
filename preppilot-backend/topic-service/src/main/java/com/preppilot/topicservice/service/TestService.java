@@ -5,6 +5,7 @@ import com.preppilot.topicservice.exception.TopicNotFoundException;
 import com.preppilot.topicservice.model.TestReport;
 import com.preppilot.topicservice.model.TestSession;
 import com.preppilot.topicservice.model.Topic;
+import com.preppilot.topicservice.model.UsageAction;
 import com.preppilot.topicservice.repository.TestReportRepository;
 import com.preppilot.topicservice.repository.TestSessionRepository;
 import com.preppilot.topicservice.repository.TopicRepository;
@@ -21,15 +22,18 @@ public class TestService {
     private final TestReportRepository testReportRepository;
     private final TopicRepository topicRepository;
     private final AiClient aiClient;
+    private final UsageLimitService usageLimitService;
 
     public TestService(TestSessionRepository testSessionRepository,
                       TestReportRepository testReportRepository,
                       TopicRepository topicRepository,
-                      AiClient aiClient) {
+                      AiClient aiClient,
+                      UsageLimitService usageLimitService) {
         this.testSessionRepository = testSessionRepository;
         this.testReportRepository = testReportRepository;
         this.topicRepository = topicRepository;
         this.aiClient = aiClient;
+        this.usageLimitService = usageLimitService;
     }
 
     /**
@@ -63,9 +67,17 @@ public class TestService {
         boolean basedOnPreviousAttempt = previousReport.isPresent()
                 && weaknesses != null && !weaknesses.isEmpty();
 
+        // A new test costs one use (resuming one above is free; so is submitting it later)
+        String usageId = usageLimitService.consume(userId, experienceLevel, UsageAction.TEST);
+
         // Generate questions from AI
-        GenerateTestQuestionsResponse aiResponse =
-                aiClient.generateTestQuestions(topic.getName(), strengths, weaknesses, experienceLevel);
+        GenerateTestQuestionsResponse aiResponse;
+        try {
+            aiResponse = aiClient.generateTestQuestions(topic.getName(), strengths, weaknesses, experienceLevel);
+        } catch (RuntimeException e) {
+            usageLimitService.refund(userId, UsageAction.TEST, usageId);
+            throw e;
+        }
 
         // Create and save test session with questions
         TestSession session = new TestSession(internalTopicId, userId);

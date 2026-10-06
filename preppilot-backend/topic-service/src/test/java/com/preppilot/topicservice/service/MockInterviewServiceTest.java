@@ -7,8 +7,10 @@ import com.preppilot.topicservice.dto.MockInterviewDtos.NextTurnResponse;
 import com.preppilot.topicservice.dto.MockInterviewDtos.PlanInterviewResponse;
 import com.preppilot.topicservice.dto.MockInterviewDtos.StartInterviewRequest;
 import com.preppilot.topicservice.exception.ApiException;
+import com.preppilot.topicservice.exception.UsageLimitExceededException;
 import com.preppilot.topicservice.model.MockInterviewSession;
 import com.preppilot.topicservice.model.Topic;
+import com.preppilot.topicservice.model.UsageAction;
 import com.preppilot.topicservice.repository.MockInterviewReportRepository;
 import com.preppilot.topicservice.repository.MockInterviewSessionRepository;
 import com.preppilot.topicservice.repository.TopicRepository;
@@ -30,7 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +44,7 @@ class MockInterviewServiceTest {
     private MockInterviewReportRepository reportRepository;
     private TopicRepository topicRepository;
     private AiClient aiClient;
+    private UsageLimitService usageLimitService;
     private MockInterviewService service;
 
     @BeforeEach
@@ -48,7 +53,8 @@ class MockInterviewServiceTest {
         reportRepository = mock(MockInterviewReportRepository.class);
         topicRepository = mock(TopicRepository.class);
         aiClient = mock(AiClient.class);
-        service = new MockInterviewService(sessionRepository, reportRepository, topicRepository, aiClient);
+        usageLimitService = mock(UsageLimitService.class);
+        service = new MockInterviewService(sessionRepository, reportRepository, topicRepository, aiClient, usageLimitService);
 
         Topic topic = new Topic("user-1", "Spring Boot");
         topic.setId("topic-1");
@@ -101,6 +107,21 @@ class MockInterviewServiceTest {
         assertFalse(response.resumed());
         assertEquals(1, response.themeProgress().currentThemeIndex());
         assertEquals(4, response.themeProgress().totalThemes());
+        // The fallback still gives the user a real interview, so it still costs one use
+        verify(usageLimitService).consume("user-1", null, UsageAction.MOCK_INTERVIEW);
+    }
+
+    @Test
+    void startInterviewOverTheUsageLimitCreatesNothingAndCallsNoAi() {
+        when(sessionRepository.findByTopicIdAndUserIdAndStatus(anyString(), anyString(), any())).thenReturn(Optional.empty());
+        when(usageLimitService.consume("user-1", "STUDENT", UsageAction.MOCK_INTERVIEW))
+                .thenThrow(new UsageLimitExceededException("limit reached", Instant.now().plus(1, ChronoUnit.DAYS)));
+
+        assertThrows(UsageLimitExceededException.class,
+                () -> service.startInterview("user-1", "topic-1", new StartInterviewRequest("SENIOR", "HARD", 30), "STUDENT"));
+
+        verify(sessionRepository, never()).save(any(MockInterviewSession.class));
+        verify(aiClient, never()).planInterview(anyString(), anyString(), anyString(), anyInt());
     }
 
     @Test
@@ -155,6 +176,8 @@ class MockInterviewServiceTest {
 
         assertThrows(ApiException.class,
                 () -> service.startInterview("user-1", "topic-1", new StartInterviewRequest("SENIOR", "HARD", 25), null));
+        // A request we reject must not cost the user a use
+        verify(usageLimitService, never()).consume(anyString(), any(), eq(UsageAction.MOCK_INTERVIEW));
     }
 
     @Test
@@ -169,6 +192,7 @@ class MockInterviewServiceTest {
         // Config from the request is ignored on resume - the original session config wins.
         assertEquals("SENIOR", response.config().experienceLevel());
         assertEquals(30, response.config().durationMinutes());
+        verify(usageLimitService, never()).consume(anyString(), any(), any());
     }
 
     @Test

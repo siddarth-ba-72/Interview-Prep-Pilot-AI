@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import * as testAPI from '../api/tests'
 import * as topicAPI from '../api/topics'
+import { USAGE_QUERY_KEY } from '../api/usage'
 import type { RootState } from '../store'
 import {
   setTestGenerating,
@@ -21,6 +23,7 @@ export default function TestPage() {
   const params = useParams<{ topicId: string }>()
   const topicId = params.topicId!
   const dispatch = useAppDispatch()
+  const queryClient = useQueryClient()
 
   const [topic, setTopic] = useState<topicAPI.Topic | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -59,14 +62,15 @@ export default function TestPage() {
           })
         )
       } catch (err) {
-        setError((err as Error).message || 'Failed to load test')
+        setError(topicAPI.extractErrorMessage(err, (err as Error).message || 'Failed to load test'))
       } finally {
         setLoading(false)
+        queryClient.invalidateQueries({ queryKey: USAGE_QUERY_KEY })
       }
     }
 
     loadTopicAndTest()
-  }, [topicId, dispatch])
+  }, [topicId, dispatch, queryClient])
 
   const handleAnswerChange = (questionId: string, answer: string | null): void => {
     dispatch(updateAnswer({ topicId, questionId, answer }))

@@ -1,5 +1,6 @@
 import type { AxiosError } from 'axios'
 import api from './axiosInstance'
+import { withRetryTime } from './usage'
 
 export type ExperienceLevel = 'STUDENT' | 'JUNIOR' | 'INTERMEDIATE' | 'SENIOR' | 'MASTER' | 'ADVANCED'
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
@@ -113,9 +114,9 @@ export interface InterviewSummary {
 /** Surfaces the API's `{ error: { code, message } }` body instead of Axios's
  * generic "Request failed with status code 500". */
 export function interviewErrorMessage(error: unknown, fallback: string): string {
-  const axiosError = error as AxiosError<{ error?: { message?: string } }>
-  const apiMessage = axiosError?.response?.data?.error?.message
-  if (apiMessage) return apiMessage
+  const axiosError = error as AxiosError<{ error?: { message?: string; retryAt?: string | null } }>
+  const apiError = axiosError?.response?.data?.error
+  if (apiError?.message) return withRetryTime(apiError.message, apiError.retryAt)
   if (error instanceof Error && error.message) return error.message
   return fallback
 }

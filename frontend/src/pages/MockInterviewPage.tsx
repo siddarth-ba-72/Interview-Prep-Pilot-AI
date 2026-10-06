@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
   ChevronDown,
@@ -18,6 +19,8 @@ import PageContainer from '../components/PageContainer'
 import RatingBadge from '../components/RatingBadge'
 import * as interviewAPI from '../api/interviews'
 import type { Difficulty, ExperienceLevel, InterviewConfig } from '../api/interviews'
+import { USAGE_QUERY_KEY, formatAvailableAt, isLocked } from '../api/usage'
+import { useUsage } from '../features/usage/useUsage'
 import {
   advanceToNextQuestion,
   interviewEnding,
@@ -68,6 +71,9 @@ export default function MockInterviewPage() {
   // A college student (per their onboarding answers) only picks the duration; the backend
   // enforces the student level too.
   const profileIsStudent = useAppSelector((state: RootState) => state.auth.user?.experienceLevel === 'STUDENT')
+  const queryClient = useQueryClient()
+  const interviewUsage = useUsage().data?.mockInterviews
+  const outOfInterviews = isLocked(interviewUsage)
 
   const [config, setConfig] = useState<InterviewConfig>(
     profileIsStudent
@@ -230,6 +236,7 @@ export default function MockInterviewPage() {
       dispatch(interviewReset({ topicId }))
     } finally {
       setBusy(false)
+      queryClient.invalidateQueries({ queryKey: USAGE_QUERY_KEY })
     }
   }
 
@@ -425,9 +432,27 @@ export default function MockInterviewPage() {
               </div>
             </fieldset>
 
+            {interviewUsage && (
+              <p className={`-mb-3 text-xs ${outOfInterviews ? 'font-medium text-danger' : 'text-muted'}`}>
+                {outOfInterviews
+                  ? `${
+                      interviewUsage.limit === 1
+                        ? "You've used your mock interview."
+                        : `You've used all ${interviewUsage.limit} mock interviews.`
+                    }${
+                      interviewUsage.availableAt
+                        ? ` You can start a new one ${formatAvailableAt(interviewUsage.availableAt)}.`
+                        : ''
+                    }${resumableSessionId ? ' You can still resume the one in progress.' : ''}`
+                  : `${interviewUsage.remaining} of ${interviewUsage.limit} mock ${
+                      interviewUsage.limit === 1 ? 'interview' : 'interviews'
+                    } left`}
+              </p>
+            )}
+
             <button
               onClick={handleStart}
-              disabled={busy || checkingForResume}
+              disabled={busy || checkingForResume || outOfInterviews}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}

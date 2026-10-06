@@ -1,6 +1,7 @@
 package com.preppilot.userservice.service;
 
 import com.preppilot.userservice.model.User;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -39,5 +40,14 @@ public class JwtService {
                 .expiration(expiry)
                 .signWith(signingKey)
                 .compact();
+    }
+
+    /** Verifies an access token's signature and expiry; throws JwtException if either fails. */
+    public Claims parseAccessToken(String token) {
+        return Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

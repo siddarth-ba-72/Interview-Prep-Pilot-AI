@@ -5,9 +5,13 @@ interface NewTopicFormProps {
   onCreate: (name: string) => Promise<void>
   isSubmitting: boolean
   error: string | null
+  /** Set when the user may not add a topic right now; disables the form and explains why. */
+  disabledReason?: string | null
 }
 
-export default function NewTopicForm({ onCreate, isSubmitting, error }: NewTopicFormProps) {
+export default function NewTopicForm({ onCreate, isSubmitting, error, disabledReason }: NewTopicFormProps) {
+  const disabled = isSubmitting || Boolean(disabledReason)
+
   const [name, setName] = useState('')
 
   async function handleSubmit(e: FormEvent) {
@@ -28,19 +32,20 @@ export default function NewTopicForm({ onCreate, isSubmitting, error }: NewTopic
           placeholder="e.g. Spring Boot, Python, DevOps"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          disabled={isSubmitting}
+          disabled={disabled}
           className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted"
         />
         <button
           type="submit"
-          disabled={isSubmitting || !name.trim()}
+          disabled={disabled || !name.trim()}
           className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus size={16} />
           <span className="hidden sm:inline">{isSubmitting ? 'Adding...' : 'Add Topic'}</span>
         </button>
       </form>
-      {error && <p className="mt-2 text-sm font-medium text-danger">{error}</p>}
+      {disabledReason && <p className="mt-2 text-sm text-muted">{disabledReason}</p>}
+      {error && !disabledReason && <p className="mt-2 text-sm font-medium text-danger">{error}</p>}
     </div>
   )
 }

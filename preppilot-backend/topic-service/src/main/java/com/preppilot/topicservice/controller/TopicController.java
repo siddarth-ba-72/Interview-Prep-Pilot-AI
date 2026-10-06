@@ -30,8 +30,9 @@ public class TopicController {
 
     @PostMapping
     public ResponseEntity<TopicResponse> create(@RequestHeader("X-User-Id") String userId,
+                                                 @RequestHeader(value = "X-User-Experience", required = false) String experienceLevel,
                                                  @Valid @RequestBody CreateTopicRequest request) {
-        TopicResponse created = topicService.create(userId, request.name());
+        TopicResponse created = topicService.create(userId, request.name(), experienceLevel);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 

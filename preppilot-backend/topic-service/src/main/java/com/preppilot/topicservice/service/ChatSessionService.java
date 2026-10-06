@@ -9,6 +9,7 @@ import com.preppilot.topicservice.exception.TopicNotFoundException;
 import com.preppilot.topicservice.model.ChatSession;
 import com.preppilot.topicservice.model.Message;
 import com.preppilot.topicservice.model.Topic;
+import com.preppilot.topicservice.model.UsageAction;
 import com.preppilot.topicservice.repository.ChatSessionRepository;
 import com.preppilot.topicservice.repository.TopicRepository;
 import com.preppilot.topicservice.util.StructuredLogger;
@@ -38,15 +39,18 @@ public class ChatSessionService {
     private final TopicRepository topicRepository;
     private final AiClient aiClient;
     private final MongoTemplate mongoTemplate;
+    private final UsageLimitService usageLimitService;
 
     public ChatSessionService(ChatSessionRepository chatSessionRepository,
                                TopicRepository topicRepository,
                                AiClient aiClient,
-                               MongoTemplate mongoTemplate) {
+                               MongoTemplate mongoTemplate,
+                               UsageLimitService usageLimitService) {
         this.chatSessionRepository = chatSessionRepository;
         this.topicRepository = topicRepository;
         this.aiClient = aiClient;
         this.mongoTemplate = mongoTemplate;
+        this.usageLimitService = usageLimitService;
     }
 
     /**
@@ -116,6 +120,9 @@ public class ChatSessionService {
         ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topic.getId())
                 .orElseThrow(() -> new ChatSessionNotFoundException(topicId));
 
+        // Each message the user sends costs one Learn message; the opening CLARIFY reply is free
+        String usageId = usageLimitService.consume(userId, experienceLevel, UsageAction.LEARN_MESSAGE);
+
         String mode = determineMode(session.getMessages().size());
 
         session.addMessage(new Message(Message.Role.USER, userContent, Instant.now()));
@@ -135,6 +142,7 @@ public class ChatSessionService {
                     sendEvent(emitter, Map.of("token", token));
                 },
                 error -> {
+                    usageLimitService.refund(userId, UsageAction.LEARN_MESSAGE, usageId);
                     log.error(
                             ErrorCode.AI_SERVICE_ERROR.getCode(),
                             "Learn Mode stream failed",

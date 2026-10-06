@@ -1,4 +1,5 @@
 import api from './axiosInstance'
+import { withRetryTime } from './usage'
 
 export interface Topic {
   id: string
@@ -28,7 +29,7 @@ export async function deleteTopic(topicId: string): Promise<void> {
 }
 
 export function extractErrorMessage(error: unknown, fallback: string): string {
-  const message = (error as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error
-    ?.message
-  return message ?? fallback
+  const apiError = (error as { response?: { data?: { error?: { message?: string; retryAt?: string | null } } } })
+    ?.response?.data?.error
+  return apiError?.message ? withRetryTime(apiError.message, apiError.retryAt) : fallback
 }

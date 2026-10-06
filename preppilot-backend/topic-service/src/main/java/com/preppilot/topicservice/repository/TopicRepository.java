@@ -16,5 +16,7 @@ public interface TopicRepository extends MongoRepository<Topic, String> {
 
     boolean existsByUserIdAndNameIgnoreCase(String userId, String name);
 
+    long countByUserId(String userId);
+
     void deleteByIdAndUserId(String id, String userId);
 }

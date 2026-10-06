@@ -2,6 +2,7 @@ package com.preppilot.topicservice.exception;
 
 import com.preppilot.topicservice.service.AiStreamException;
 import com.preppilot.topicservice.util.StructuredLogger;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -9,6 +10,9 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -19,6 +23,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleApiException(ApiException ex) {
         log.error(ex.getCode(), ex.getMessage());
         return ResponseEntity.status(ex.getStatus()).body(errorBody(ex.getCode(), ex.getMessage()));
+    }
+
+    /** Adds {@code retryAt} to the usual error body, and a Retry-After header. */
+    @ExceptionHandler(UsageLimitExceededException.class)
+    public ResponseEntity<Object> handleUsageLimit(UsageLimitExceededException ex) {
+        log.warn(ex.getCode(), ex.getMessage());
+        Map<String, Object> error = new LinkedHashMap<>();
+        error.put("code", ex.getCode());
+        error.put("message", ex.getMessage());
+        error.put("retryAt", ex.getRetryAt());
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(ex.getStatus());
+        if (ex.getRetryAt() != null) {
+            long seconds = Math.max(0, Duration.between(Instant.now(), ex.getRetryAt()).toSeconds());
+            response.header(HttpHeaders.RETRY_AFTER, String.valueOf(seconds));
+        }
+        return response.body(Map.of("error", error));
     }
 
     @ExceptionHandler(AiStreamException.class)

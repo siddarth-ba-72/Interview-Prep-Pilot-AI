@@ -5,6 +5,7 @@ import com.preppilot.topicservice.dto.ChatDtos.ChatSessionResponse;
 import com.preppilot.topicservice.dto.ChatDtos.PagedMessagesResponse;
 import com.preppilot.topicservice.dto.ChatDtos.SendMessageRequest;
 import com.preppilot.topicservice.exception.ApiException;
+import com.preppilot.topicservice.exception.UsageLimitExceededException;
 import com.preppilot.topicservice.service.ChatSessionService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
@@ -14,6 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -52,14 +54,20 @@ public class ChatController {
         try {
             return chatSessionService.streamReply(userId, topicId, request.content(), experienceLevel);
         } catch (ApiException ex) {
-            return errorEmitter(ex.getMessage());
+            return errorEmitter(ex);
         }
     }
 
-    private SseEmitter errorEmitter(String message) {
+    private SseEmitter errorEmitter(ApiException ex) {
         SseEmitter emitter = new SseEmitter(0L);
+        Map<String, Object> event = new HashMap<>();
+        event.put("error", ex.getMessage());
+        event.put("code", ex.getCode());
+        if (ex instanceof UsageLimitExceededException limit && limit.getRetryAt() != null) {
+            event.put("retryAt", limit.getRetryAt().toString());
+        }
         try {
-            String data = objectMapper.writeValueAsString(Map.of("error", message));
+            String data = objectMapper.writeValueAsString(event);
             emitter.send(SseEmitter.event().data(data, MediaType.APPLICATION_JSON));
         } catch (IOException ignored) {
         }

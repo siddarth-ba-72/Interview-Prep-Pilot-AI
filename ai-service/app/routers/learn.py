@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
-from app.auth import require_caller_identity
+from app.auth import require_internal_api_key
 from app.exceptions import ErrorCode
 from app.llm import stream_completion
 from app.prompts import build_messages
@@ -49,5 +49,5 @@ async def _event_stream(request: LearnStreamRequest):
 
 
 @router.post("/stream")
-async def learn_stream(request: LearnStreamRequest, caller: str = Depends(require_caller_identity)):
+async def learn_stream(request: LearnStreamRequest, _=Depends(require_internal_api_key)):
     return StreamingResponse(_event_stream(request), media_type="text/event-stream")

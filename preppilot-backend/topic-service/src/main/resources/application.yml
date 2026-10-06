@@ -28,3 +28,25 @@ server:
 
 ai-service:
   internal-api-key: "${INTERNAL_API_KEY}"
+
+# Same secret the gateway and user-service use. Every request is checked here too, so calling
+# this service directly (skipping the gateway) still needs a valid access token.
+jwt:
+  secret: "${JWT_SECRET}"
+
+# Per-user limits on AI-backed actions, counted over a sliding window. Once a user uses up an
+# action's limit they are locked out of it until one full window after that last action.
+# The tier comes from the onboarding answer: STUDENT gets the student tier, everyone else
+# (including users who have not onboarded yet) gets the standard tier.
+# Leave max-topics unset for no topic limit.
+usage-limits:
+  window: 24h
+  student:
+    max-topics: 2
+    learn-messages: 30
+    tests: 2
+    mock-interviews: 1
+  standard:
+    learn-messages: 50
+    tests: 3
+    mock-interviews: 2
