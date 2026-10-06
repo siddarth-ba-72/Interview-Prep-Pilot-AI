@@ -209,6 +209,9 @@ def build_test_evaluation_messages(topic_name: str, answers: list[dict]) -> list
 # hand the model (especially *which* question is being graded) is spelled out explicitly.
 
 EXPERIENCE_LEVEL_BAR = {
+    "STUDENT": "College student, no professional experience. Expect the core idea explained correctly "
+               "in their own words; a clear, mostly accurate explanation with a simple example is STRONG "
+               "even if terminology is imperfect. Never expect production, internals or design trade-offs.",
     "JUNIOR": "0-2 years. Expect correct fundamentals and clear definitions. A textbook-accurate "
               "explanation with a simple example is STRONG. Do not require production war stories.",
     "INTERMEDIATE": "2-5 years. Expect correct fundamentals plus practical usage and awareness of common "
@@ -228,6 +231,24 @@ def _experience_bar(experience_level: str) -> str:
         (experience_level or "").upper(),
         EXPERIENCE_LEVEL_BAR["INTERMEDIATE"],
     )
+
+
+# Students get a fixed ~80/20 mix of EASY and MEDIUM questions, whatever difficulty was configured.
+# The level of each question is decided here rather than left to the model, which cannot keep a
+# ratio across turns. One question in every five is MEDIUM, starting at question 4, so the
+# student answers three easy questions to build confidence before the first stretch.
+STUDENT_LEVEL = "STUDENT"
+STUDENT_MEDIUM_EVERY = 5
+STUDENT_FIRST_MEDIUM = 4
+
+
+def _is_student(experience_level: str) -> bool:
+    return (experience_level or "").strip().upper() == STUDENT_LEVEL
+
+
+def student_question_level(question_number: int) -> str:
+    """EASY or MEDIUM for the 1-based position of a question in a student interview."""
+    return "MEDIUM" if question_number % STUDENT_MEDIUM_EVERY == STUDENT_FIRST_MEDIUM else "EASY"
 
 
 INTERVIEW_PLAN_SYSTEM_PROMPT = (
@@ -250,6 +271,14 @@ INTERVIEW_PLAN_SYSTEM_PROMPT = (
     "{{\n"
     '  "themes": ["theme label", "theme label"]\n'
     "}}"
+)
+
+STUDENT_PLAN_INSTRUCTION = (
+    "This candidate is a college student with no professional experience; ignore the configured "
+    "difficulty. Choose themes from the fundamentals of {topic_name} that are taught in coursework "
+    "or introductory tutorials. Avoid production operations, scaling, performance tuning, internals "
+    "and architecture themes. The last theme or two may be slightly more applied, because about one "
+    "question in five will be at MEDIUM level."
 )
 
 INTERVIEW_TURN_SYSTEM_PROMPT = (
@@ -313,6 +342,23 @@ INTERVIEW_TURN_SYSTEM_PROMPT = (
     'Set "evaluation" to null ONLY on the opening turn, when there is no answer to grade yet.'
 )
 
+STUDENT_TURN_INSTRUCTION = (
+    "## This candidate is a college student\n"
+    "They have no professional experience. The goal is to build their confidence while still "
+    "checking real understanding.\n"
+    "- Ask the next question at exactly the NEXT QUESTION LEVEL given in the prompt. This overrides "
+    "the configured difficulty and the rule about drilling deeper with a harder question: a "
+    "follow-up after a STRONG answer stays at the given level.\n"
+    "- EASY: a core concept, a definition, or a simple \"what happens when\" question that a student "
+    "who has studied the topic in class or from a tutorial can answer.\n"
+    "- MEDIUM: apply a fundamental to a small, concrete scenario, or compare two basic approaches. "
+    "It must still be answerable from coursework, with no work experience.\n"
+    "- Never ask about production incidents, large-scale system design, team practices, or "
+    "\"in your experience\" questions; the candidate has no work history to draw on.\n"
+    "- Keep feedback warm and encouraging: lead with what they got right, then name the one gap as "
+    "the thing to learn next. Still grade honestly against the depth bar for students."
+)
+
 INTERVIEW_REPORT_SYSTEM_PROMPT = (
     "You are an expert technical interviewer writing the final report for a completed mock interview. "
     "You are given every exchange: the question, the candidate's verbatim answer, the theme, and the "
@@ -349,6 +395,14 @@ INTERVIEW_REPORT_SYSTEM_PROMPT = (
 )
 
 
+STUDENT_REPORT_INSTRUCTION = (
+    "This candidate is a college student. Write overallSummary in an encouraging tone: open with "
+    "what they did well and frame weaknesses as the next things to learn, while staying honest. "
+    "Write each betterAnswer so a student can learn from it: clear and fundamentals-first, with no "
+    "production jargon."
+)
+
+
 def _theme_count_for_duration(duration_minutes: int | None) -> int:
     """~4 themes for 30 min, ~6 for 45, ~8 for 60 (Phase 4 spec guideline)."""
     if not duration_minutes:
@@ -368,6 +422,8 @@ def build_interview_plan_messages(topic_name: str, experience_level: str, diffic
         duration_minutes=duration_minutes,
         theme_count=_theme_count_for_duration(duration_minutes),
     )
+    if _is_student(experience_level):
+        system_content += "\n\n" + STUDENT_PLAN_INSTRUCTION.format(topic_name=topic_name)
     user_content = (
         f"Create the theme plan for a {duration_minutes}-minute {difficulty} interview on {topic_name} "
         f"for a {experience_level} candidate. Return JSON only."
@@ -445,11 +501,22 @@ def build_interview_next_turn_messages(
             "and ask the opening question for the first theme."
         )
 
+    system_content = INTERVIEW_TURN_SYSTEM_PROMPT
+    difficulty_line = f"CONFIGURED DIFFICULTY: {difficulty}\n"
+    if _is_student(experience_level):
+        has_answer_to_grade = bool(current_question and current_question.get("question"))
+        next_question_number = len(prior_exchanges) + (1 if has_answer_to_grade else 0) + 1
+        system_content += "\n\n" + STUDENT_TURN_INSTRUCTION
+        difficulty_line = (
+            f"NEXT QUESTION LEVEL: {student_question_level(next_question_number)} "
+            f"(question {next_question_number} of the interview)\n"
+        )
+
     user_content = (
         f"TOPIC: {topic_name}\n"
         f"CANDIDATE EXPERIENCE LEVEL: {experience_level}\n"
         f"DEPTH BAR FOR THIS LEVEL: {_experience_bar(experience_level)}\n"
-        f"CONFIGURED DIFFICULTY: {difficulty}\n"
+        f"{difficulty_line}"
         f"TIME REMAINING: {remaining_seconds if remaining_seconds is not None else 'unknown'} seconds\n\n"
         f"THEME PLAN:\n{_format_theme_plan(theme_plan, current_theme_index)}\n"
         f"CURRENT THEME: {current_theme}\n"
@@ -461,7 +528,7 @@ def build_interview_next_turn_messages(
         "Respond with the JSON object only."
     )
     return [
-        {"role": "system", "content": INTERVIEW_TURN_SYSTEM_PROMPT},
+        {"role": "system", "content": system_content},
         {"role": "user", "content": user_content},
     ]
 
@@ -489,7 +556,10 @@ def build_interview_report_messages(topic_name: str, experience_level: str, diff
         f"EXCHANGES:\n{exchange_text}\n\n"
         "Write the report as the JSON object only."
     )
+    system_content = INTERVIEW_REPORT_SYSTEM_PROMPT
+    if _is_student(experience_level):
+        system_content += "\n\n" + STUDENT_REPORT_INSTRUCTION
     return [
-        {"role": "system", "content": INTERVIEW_REPORT_SYSTEM_PROMPT},
+        {"role": "system", "content": system_content},
         {"role": "user", "content": user_content},
     ]

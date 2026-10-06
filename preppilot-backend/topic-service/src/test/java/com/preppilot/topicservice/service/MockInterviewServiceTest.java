@@ -104,6 +104,19 @@ class MockInterviewServiceTest {
     }
 
     @Test
+    void startInterviewAcceptsTheStudentLevelAndUsesAStudentFriendlyFallbackOpener() {
+        when(sessionRepository.findByTopicIdAndUserIdAndStatus(anyString(), anyString(), any())).thenReturn(Optional.empty());
+        when(aiClient.planInterview(anyString(), anyString(), anyString(), anyInt()))
+                .thenThrow(new RuntimeException("AI service unavailable"));
+
+        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("student", "EASY", 30));
+
+        assertEquals("STUDENT", response.config().experienceLevel());
+        assertTrue(response.currentQuestion().question().contains("in your own words"));
+        assertFalse(response.currentQuestion().question().contains("your experience with"));
+    }
+
+    @Test
     void startInterviewRejectsAnUnknownExperienceLevel() {
         when(sessionRepository.findByTopicIdAndUserIdAndStatus(anyString(), anyString(), any())).thenReturn(Optional.empty());
 

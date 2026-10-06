@@ -1,7 +1,7 @@
 import type { AxiosError } from 'axios'
 import api from './axiosInstance'
 
-export type ExperienceLevel = 'JUNIOR' | 'INTERMEDIATE' | 'SENIOR' | 'MASTER' | 'ADVANCED'
+export type ExperienceLevel = 'STUDENT' | 'JUNIOR' | 'INTERMEDIATE' | 'SENIOR' | 'MASTER' | 'ADVANCED'
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
 export type Rating = 'STRONG' | 'SATISFACTORY' | 'WEAK'
 

@@ -31,6 +31,7 @@ import {
 } from '../features/interviews/interviewSlice'
 
 const EXPERIENCE_LEVELS: Array<{ value: ExperienceLevel; label: string; years: string }> = [
+  { value: 'STUDENT', label: 'Student', years: 'Still in college' },
   { value: 'JUNIOR', label: 'Junior', years: '0-2 years' },
   { value: 'INTERMEDIATE', label: 'Intermediate', years: '2-5 years' },
   { value: 'SENIOR', label: 'Senior', years: '5-8 years' },
@@ -70,6 +71,8 @@ export default function MockInterviewPage() {
     difficulty: 'MEDIUM',
     durationMinutes: 30,
   })
+  // Students get a fixed mix of mostly easy questions, so the difficulty picker is pinned to Easy.
+  const isStudent = config.experienceLevel === 'STUDENT'
   const [answer, setAnswer] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -327,14 +330,20 @@ export default function MockInterviewPage() {
               <div>
                 <legend className="text-sm font-bold text-fg">Experience level</legend>
                 <p className="mb-3 text-xs text-muted">Sets how much depth an answer needs to count as strong.</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {EXPERIENCE_LEVELS.map((level) => {
                     const selected = config.experienceLevel === level.value
                     return (
                       <button
                         key={level.value}
                         type="button"
-                        onClick={() => setConfig((current) => ({ ...current, experienceLevel: level.value }))}
+                        onClick={() =>
+                          setConfig((current) => ({
+                            ...current,
+                            experienceLevel: level.value,
+                            difficulty: level.value === 'STUDENT' ? 'EASY' : current.difficulty,
+                          }))
+                        }
                         className={`rounded-xl border p-3 text-left transition-colors ${
                           selected
                             ? 'border-primary bg-primary-subtle'
@@ -352,7 +361,11 @@ export default function MockInterviewPage() {
               <div className="grid gap-6 sm:grid-cols-2">
                 <div>
                   <legend className="text-sm font-bold text-fg">Difficulty</legend>
-                  <p className="mb-3 text-xs text-muted">Baseline complexity and how fast follow-ups escalate.</p>
+                  <p className="mb-3 text-xs text-muted">
+                    {isStudent
+                      ? 'Set for students: mostly easy questions, with about one in five at medium.'
+                      : 'Baseline complexity and how fast follow-ups escalate.'}
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     {DIFFICULTIES.map((option) => {
                       const selected = config.difficulty === option.value
@@ -360,8 +373,9 @@ export default function MockInterviewPage() {
                         <button
                           key={option.value}
                           type="button"
+                          disabled={isStudent}
                           onClick={() => setConfig((current) => ({ ...current, difficulty: option.value }))}
-                          className={`rounded-xl border p-3 text-left transition-colors ${
+                          className={`rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                             selected
                               ? 'border-primary bg-primary-subtle'
                               : 'border-border bg-surface hover:bg-surface-hover'

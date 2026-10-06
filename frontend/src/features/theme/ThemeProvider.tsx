@@ -9,10 +9,15 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
+// Light is the default; only an explicit choice via the toggle is persisted.
+const STORAGE_KEY = 'preppilot-theme'
+
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem('theme')
-  if (stored === 'light' || stored === 'dark') return stored
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  try {
+    return localStorage.getItem(STORAGE_KEY) === 'dark' ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -20,13 +25,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
-    localStorage.setItem('theme', theme)
   }, [theme])
 
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
-      toggleTheme: () => setTheme((current) => (current === 'dark' ? 'light' : 'dark')),
+      toggleTheme: () =>
+        setTheme((current) => {
+          const next = current === 'dark' ? 'light' : 'dark'
+          try {
+            localStorage.setItem(STORAGE_KEY, next)
+          } catch {
+            // Storage unavailable: the choice still applies for this session.
+          }
+          return next
+        }),
     }),
     [theme]
   )

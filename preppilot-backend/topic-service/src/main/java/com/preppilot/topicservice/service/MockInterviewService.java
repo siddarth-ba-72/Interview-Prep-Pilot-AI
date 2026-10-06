@@ -35,8 +35,10 @@ public class MockInterviewService {
     static final int MAX_FOLLOW_UPS_PER_THEME = 4;
 
     private static final Set<Integer> ALLOWED_DURATIONS = Set.of(30, 45, 60);
+    /** College students with no work experience - the AI Service keeps their questions mostly easy. */
+    private static final String STUDENT_LEVEL = "STUDENT";
     private static final Set<String> ALLOWED_EXPERIENCE_LEVELS =
-            Set.of("JUNIOR", "INTERMEDIATE", "SENIOR", "MASTER", "ADVANCED");
+            Set.of(STUDENT_LEVEL, "JUNIOR", "INTERMEDIATE", "SENIOR", "MASTER", "ADVANCED");
     private static final Set<String> ALLOWED_DIFFICULTIES = Set.of("EASY", "MEDIUM", "HARD");
 
     /** Rotated (rather than reused verbatim) so a run of AI failures doesn't show the
@@ -46,6 +48,14 @@ public class MockInterviewService {
             "Thinking about %s: describe how you would approach it in a real project, and what you would watch out for.",
             "How would you explain %s to a teammate who has never worked with it, and what caveat would you flag for them?",
             "What trade-offs would you weigh when applying %s in a production system, and how would you decide?"
+    );
+
+    /** Students have no project or production history to draw on, so their fallbacks stay on fundamentals. */
+    private static final List<String> STUDENT_FALLBACK_QUESTION_TEMPLATES = List.of(
+            "Let's move on to %s. Explain the main idea in your own words, with a simple example.",
+            "Thinking about %s: what problem does it solve, and when would you use it?",
+            "How would you explain %s to a classmate who is seeing it for the first time?",
+            "What is one common beginner mistake with %s, and how would you avoid it?"
     );
 
     private final MockInterviewSessionRepository sessionRepository;
@@ -145,11 +155,11 @@ public class MockInterviewService {
             log.warn("Opening question generation failed for topic '{}'; using the fallback opener", topicName, ex);
         }
         String firstTheme = session.getThemePlan().get(0);
-        return new MockInterviewSession.QuestionState(
-                "To get started, tell me about your experience with " + firstTheme
-                        + " and how you have applied it in practice.",
-                firstTheme,
-                false);
+        String opener = isStudent(session)
+                ? "To get started, explain " + firstTheme + " in your own words, with a simple example."
+                : "To get started, tell me about your experience with " + firstTheme
+                        + " and how you have applied it in practice.";
+        return new MockInterviewSession.QuestionState(opener, firstTheme, false);
     }
 
     // ------------------------------------------------------------------ read state
@@ -339,11 +349,13 @@ public class MockInterviewService {
     private MockInterviewSession.QuestionState fallbackNextQuestion(MockInterviewSession session, String topicName) {
         List<String> plan = session.getThemePlan();
         int nextThemeIndex = valueOrZero(session.getCurrentThemeIndex()) + 1;
+        boolean student = isStudent(session);
         String theme = (plan != null && nextThemeIndex < plan.size())
                 ? plan.get(nextThemeIndex)
-                : "advanced " + topicName + " topics";
+                : (student ? "more " + topicName + " fundamentals" : "advanced " + topicName + " topics");
+        List<String> templates = student ? STUDENT_FALLBACK_QUESTION_TEMPLATES : FALLBACK_QUESTION_TEMPLATES;
         int rotation = session.getExchanges() == null ? 0 : session.getExchanges().size();
-        String template = FALLBACK_QUESTION_TEMPLATES.get(rotation % FALLBACK_QUESTION_TEMPLATES.size());
+        String template = templates.get(rotation % templates.size());
         return new MockInterviewSession.QuestionState(String.format(template, theme), theme, false);
     }
 
@@ -579,6 +591,10 @@ public class MockInterviewService {
             }
         }
         return -1;
+    }
+
+    private static boolean isStudent(MockInterviewSession session) {
+        return STUDENT_LEVEL.equals(session.getExperienceLevel());
     }
 
     private static boolean hasText(String value) {

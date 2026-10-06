@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { MessagesSquare, ClipboardCheck, Mic } from 'lucide-react'
+import ThemeToggle from './ThemeToggle'
 
 const FEATURES = [
   { icon: MessagesSquare, label: 'Learn Mode', desc: 'Chat with an AI tutor on any topic, anytime.' },
@@ -56,7 +57,10 @@ export default function AuthShell({
         </div>
       </div>
 
-      <div className="flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:w-1/2">
+      <div className="relative flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:w-1/2">
+        <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-base font-black text-white">
