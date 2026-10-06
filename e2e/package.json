@@ -1,0 +1,20 @@
+{
+  "name": "preppilot-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Playwright end-to-end and browser load tests for PrepPilot",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test --project=e2e",
+    "test:headed": "playwright test --project=e2e --headed",
+    "load": "playwright test --project=load",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
+    "install-browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.4.5"
+  }
+}

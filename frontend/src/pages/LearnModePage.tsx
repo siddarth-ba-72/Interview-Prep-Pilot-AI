@@ -86,7 +86,9 @@ export default function LearnModePage() {
             onLoadMore={handleLoadMore}
           />
           {session.status === 'error' && session.error && (
-            <p className="mx-auto w-full max-w-3xl px-4 text-sm font-medium text-danger sm:px-6">{session.error}</p>
+            <p role="alert" className="mx-auto w-full max-w-3xl px-4 text-sm font-medium text-danger sm:px-6">
+              {session.error}
+            </p>
           )}
           <div className="border-t border-border bg-surface px-4 py-3 sm:px-6">
             <div className="mx-auto w-full max-w-3xl">

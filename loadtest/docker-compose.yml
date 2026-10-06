@@ -1,0 +1,153 @@
+# Self-contained PrepPilot stack for load tests and Playwright end-to-end tests.
+#
+#   docker compose -f loadtest/docker-compose.yml up --build -d --wait
+#   docker compose -f loadtest/docker-compose.yml down        # add -v to also wipe its MongoDB
+#
+# Isolation:
+# - ai-service talks to fake-llm (an OpenAI-compatible fake), never to the real OpenAI API. Its
+#   image is built without ai-service/.env, and OPENAI_API_KEY is a dummy, so a misconfiguration
+#   fails with a 401 instead of spending tokens.
+# - Its own MongoDB container and volume; none of your .env files are read (they point at Atlas).
+# - All secrets below are test-only values.
+# - Usage limits are raised so virtual users don't hit 429 after a handful of requests.
+#
+# Ports (bound to localhost only): frontend 3000, gateway 8080, fake-llm 8090, MongoDB 27019.
+# They clash with the regular docker-compose.yml stack, so stop that one first.
+
+name: preppilot-loadtest
+
+x-jwt-secret: &jwt-secret "loadtest-only-jwt-secret-do-not-use-anywhere-else-0123456789abcdef"
+x-internal-api-key: &internal-api-key "loadtest-only-internal-api-key"
+x-mongodb-uri: &mongodb-uri "mongodb://root:loadtest@mongodb:27017/?authSource=admin"
+
+services:
+  mongodb:
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: loadtest
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "127.0.0.1:27019:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  fake-llm:
+    build: ./fake-llm
+    environment:
+      # Defaults are realistic gpt-4o-mini timing. FAKE_LLM_LATENCY_SCALE=0.1 makes everything
+      # ten times faster for quick functional runs. All knobs: fake-llm/fake_llm/config.py.
+      FAKE_LLM_LATENCY_SCALE: ${FAKE_LLM_LATENCY_SCALE:-1.0}
+      FAKE_LLM_SLOW_RATE: ${FAKE_LLM_SLOW_RATE:-0.02}
+      FAKE_LLM_ERROR_RATE: ${FAKE_LLM_ERROR_RATE:-0}
+      FAKE_LLM_RATE_LIMIT_RATE: ${FAKE_LLM_RATE_LIMIT_RATE:-0}
+      FAKE_LLM_STREAM_DROP_RATE: ${FAKE_LLM_STREAM_DROP_RATE:-0}
+      FAKE_LLM_BAD_JSON_RATE: ${FAKE_LLM_BAD_JSON_RATE:-0}
+      FAKE_LLM_SEED: ${FAKE_LLM_SEED:-}
+    ports:
+      - "127.0.0.1:8090:8090"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ai-service:
+    build:
+      context: ../ai-service
+      dockerfile: ../loadtest/ai-service.Dockerfile
+    environment:
+      OPENAI_API_KEY: sk-fake-loadtest-not-a-real-key
+      OPENAI_BASE_URL: http://fake-llm:8090/v1
+      LLM_MODEL: gpt-4o-mini
+      INTERNAL_API_KEY: *internal-api-key
+    depends_on:
+      fake-llm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  user-service:
+    build:
+      context: ../preppilot-backend
+      dockerfile: user-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      MONGODB_URI: *mongodb-uri
+      JWT_SECRET: *jwt-secret
+      GOOGLE_CLIENT_ID: loadtest-google-client-id
+      GOOGLE_CLIENT_SECRET: loadtest-google-client-secret
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck: &spring-health
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8081/actuator/health | grep -q UP"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  topic-service:
+    build:
+      context: ../preppilot-backend
+      dockerfile: topic-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      MONGODB_URI: *mongodb-uri
+      JWT_SECRET: *jwt-secret
+      INTERNAL_API_KEY: *internal-api-key
+      # Same shape as usage-limits in application.yml, raised so load tests measure the system
+      # instead of the quota. Remove this to load-test the real limits.
+      SPRING_APPLICATION_JSON: >-
+        {"usage-limits": {
+          "student": {"max-topics": 1000, "learn-messages": 100000, "tests": 100000, "mock-interviews": 100000},
+          "standard": {"learn-messages": 100000, "tests": 100000, "mock-interviews": 100000}}}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *spring-health
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/actuator/health | grep -q UP"]
+
+  gateway:
+    build: ../preppilot-backend/gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      JWT_SECRET: *jwt-secret
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      topic-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *spring-health
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q UP"]
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../loadtest/frontend.Dockerfile
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mongo-data:

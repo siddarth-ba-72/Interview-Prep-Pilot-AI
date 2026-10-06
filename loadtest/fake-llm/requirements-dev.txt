@@ -1,0 +1,6 @@
+# Runs the tests: the fake itself plus ai-service's dependencies, because the contract test
+# imports ai-service's real code and points it at the fake.
+-r requirements.txt
+-r ../../ai-service/requirements.txt
+pytest>=8.0
+httpx>=0.27.0
