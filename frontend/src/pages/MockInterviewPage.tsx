@@ -644,7 +644,9 @@ export default function MockInterviewPage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-3 text-lg font-semibold leading-relaxed text-fg">{question.question}</p>
+                <p className="mt-3 text-lg font-semibold leading-relaxed text-fg" data-testid="interview-question">
+                  {question.question}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-border bg-surface p-4">

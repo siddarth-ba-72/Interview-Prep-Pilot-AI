@@ -123,7 +123,9 @@ export default function TestPage() {
       <div className="min-h-screen bg-bg">
         <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test Mode" />
         <PageContainer maxWidth="max-w-3xl" className="flex flex-col items-start gap-4">
-          <p className="text-sm font-medium text-danger">{error}</p>
+          <p role="alert" className="text-sm font-medium text-danger">
+            {error}
+          </p>
           <button
             onClick={() => navigate('/dashboard')}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-fg hover:bg-primary-hover"
