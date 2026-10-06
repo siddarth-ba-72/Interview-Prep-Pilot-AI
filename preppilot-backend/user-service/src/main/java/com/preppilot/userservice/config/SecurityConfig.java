@@ -12,9 +12,11 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     private final OAuthSuccessHandler oauthSuccessHandler;
+    private final OAuthFailureHandler oauthFailureHandler;
 
-    public SecurityConfig(OAuthSuccessHandler oauthSuccessHandler) {
+    public SecurityConfig(OAuthSuccessHandler oauthSuccessHandler, OAuthFailureHandler oauthFailureHandler) {
         this.oauthSuccessHandler = oauthSuccessHandler;
+        this.oauthFailureHandler = oauthFailureHandler;
     }
 
     @Bean
@@ -28,6 +30,7 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler(oauthSuccessHandler)
+                        .failureHandler(oauthFailureHandler)
                 );
 
         return http.build();

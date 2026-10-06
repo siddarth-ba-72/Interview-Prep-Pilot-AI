@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAppDispatch } from '../hooks'
 import { setCredentials, setLoading, setError } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
@@ -11,7 +11,11 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [errorMsg, setErrorMsg] = useState('')
+  const [searchParams] = useSearchParams()
+  const oauthError = searchParams.get('oauth_error')
+  const [errorMsg, setErrorMsg] = useState(
+    oauthError ? `Google sign-in failed (${oauthError}). Please try again.` : ''
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
