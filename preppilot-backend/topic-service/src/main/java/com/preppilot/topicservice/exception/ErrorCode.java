@@ -9,6 +9,10 @@ public enum ErrorCode {
     USER_INVALID_CONFIG(HttpStatus.BAD_REQUEST, "Invalid configuration"),
     USER_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "Unauthorized access"),
 
+    // Usage limits (403/429)
+    TOPIC_LIMIT_REACHED(HttpStatus.FORBIDDEN, "Topic limit reached"),
+    USAGE_LIMIT_REACHED(HttpStatus.TOO_MANY_REQUESTS, "Usage limit reached"),
+
     // Not found (404)
     TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, "Topic not found"),
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "Chat session not found"),

@@ -179,7 +179,7 @@ int-prep-ai/
 │   │   │   ├── test.py                 # Test mode question generation, evaluation
 │   │   │   ├── mock_interview.py       # Mock interview orchestration
 │   │   │   └── health.py               # Health check endpoint
-│   │   ├── middleware/                 # Dual-auth middleware (X-Internal-Api-Key + X-User-Id)
+│   │   ├── auth.py                     # Internal-key auth (X-Internal-Api-Key only)
 │   │   ├── config.py                   # Settings, LLM configuration
 │   │   └── __init__.py
 │   ├── main.py                         # FastAPI app initialization
@@ -323,7 +323,7 @@ Each service requires a `.env` file (gitignored). Copy `.env.example` in each di
 |---|---|---|
 | **Gateway** | `preppilot-backend/gateway/.env` | `JWT_SECRET`, `USER_SERVICE_URL`, `TOPIC_SERVICE_URL`, `AI_SERVICE_URL`, `FRONTEND_ORIGIN` |
 | **User Service** | `preppilot-backend/user-service/.env` | `MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FRONTEND_ORIGIN`, `REFRESH_TOKEN_EXPIRY` |
-| **Topic Service** | `preppilot-backend/topic-service/.env` | `MONGODB_URI`, `INTERNAL_API_KEY`, `AI_SERVICE_URL`, `GATEWAY_URL` |
+| **Topic Service** | `preppilot-backend/topic-service/.env` | `MONGODB_URI`, `JWT_SECRET`, `INTERNAL_API_KEY`, `AI_SERVICE_URL`, `GATEWAY_URL` |
 | **AI Service** | `ai-service/.env` | `LLM_API_KEY`, `LLM_MODEL`, `INTERNAL_API_KEY`, `OPENAI_API_KEY` |
 | **Frontend** | `frontend/.env` | `VITE_API_BASE_URL` |
 | **MongoDB** | Root `.env` | `MONGO_ROOT_USER`, `MONGO_ROOT_PASSWORD` |
@@ -331,7 +331,7 @@ Each service requires a `.env` file (gitignored). Copy `.env.example` in each di
 ### Critical Invariants
 
 ⚠️ **These values MUST match across services:**
-- `JWT_SECRET` must be identical in `gateway/.env` and `user-service/.env`
+- `JWT_SECRET` must be identical in `gateway/.env`, `user-service/.env` and `topic-service/.env` (all three verify access tokens)
 - `INTERNAL_API_KEY` must be identical in `topic-service/.env` and `ai-service/.env`
 
 ### Quick Start (Docker Compose)
@@ -425,7 +425,7 @@ Each service requires a `.env` file (gitignored). Copy `.env.example` in each di
 | **API Gateway** | 8080 | Route all traffic, JWT validation, inject X-User-Id header, enforce CORS & rate limits |
 | **User Service** | 8081 | User registration/login, Google OAuth, JWT/refresh token management, user profiles |
 | **Topic Service** | 8082 | Topic CRUD, Learn Mode chats, Test Mode, Mock Interview sessions, Report generation and storage |
-| **AI Service** | 8000 | Stateless LLM orchestration, prompt engineering, SSE streaming, dual-auth (X-Internal-Api-Key + X-User-Id) |
+| **AI Service** | 8000 | Stateless LLM orchestration, prompt engineering, SSE streaming; only Topic Service may call it (X-Internal-Api-Key) |
 | **MongoDB** | 27017 | Persistent document storage (users_db, topics_db) |
 
 ### Data Flow Patterns
@@ -473,25 +473,26 @@ After all questions → Topic Service aggregates evaluations into Interview Repo
 - Frontend stores access token in Redux, never in localStorage (prevents XSS)
 
 ### User ID Trust
-- **Critical invariant:** Downstream services ONLY trust `X-User-Id` header injected by Gateway
-- Never accept userId from request body or URL path for security-sensitive operations
+- **Critical invariant:** the user's identity always comes from a verified access token, never from a header or body the caller controls
 - Gateway extracts userId from validated JWT and adds it as `X-User-Id` header
+- User Service (`/api/v1/users/**`) and Topic Service have public URLs, so each also verifies the `Authorization: Bearer` token itself (`config/JwtAuthFilter.java`) and overwrites `X-User-Id`, `X-User-Email` and `X-User-Experience` from its claims. Controllers keep reading those headers.
+- Never accept userId from request body or URL path for security-sensitive operations
 
-### AI Service Security (Dual Auth)
-The AI Service accepts requests from two types of callers:
+### AI Service Security (Internal Key Only)
+Only Topic Service may call the AI Service; every request must carry the shared `X-Internal-Api-Key`, otherwise 401. A bare `X-User-Id` is not accepted: the AI Service has a public URL and every call spends LLM tokens. Users reach the AI only through Topic Service, which checks their token and usage limits first.
 
-1. **Topic Service (Internal)** – validated via `X-Internal-Api-Key` header
-2. **Authenticated Users (via Gateway)** – validated via JWT at Gateway, `X-User-Id` forwarded
+### Usage Limits
+Topic Service limits AI-backed actions per user (`UsageLimitService`, configured under `usage-limits` in its `application.yml`). The tier comes from the `experienceLevel` token claim: `STUDENT` gets the student tier, everyone else the standard tier.
 
-**Middleware check (every AI request):**
-```
-Is X-Internal-Api-Key present and valid?
-  → YES → Allow (internal service call)
-  → NO:
-Is X-User-Id header present?
-  → YES → Allow (user authenticated via Gateway)
-  → NO → 401 Unauthorized
-```
+| Tier | Topics | Learn messages | Tests | Mock interviews |
+|---|---|---|---|---|
+| Student | 2 | 30 | 2 | 1 |
+| Standard | no limit | 50 | 3 | 2 |
+
+- Actions are counted over a sliding 24h window. The use that reaches the limit locks the action until 24h after that use; then the full limit is back.
+- What costs a use: sending a Learn message, starting a new test, starting a new mock interview. Resuming, submitting a test, answering and ending an interview, and the first Learn chat reply are free.
+- A use whose AI call fails is refunded. Over the limit returns `429 USAGE_LIMIT_REACHED` with `retryAt`; the topic limit returns `403 TOPIC_LIMIT_REACHED`.
+- State lives in the `usage_windows` collection (one document per user and action, TTL-cleaned), updated atomically so concurrent requests cannot both take the last slot. `GET /api/v1/usage` returns what is left.
 
 ---
 
@@ -541,7 +542,7 @@ See `specs/Rollout-Plan.md` and `specs/Tech-Decisions.md` for detailed phase bre
 | **JWT in-memory + refresh token in HTTP-only cookie** | Prevents XSS (no localStorage) and CSRF (access token not in cookie) |
 | **SSE Streaming** | Real-time user experience; responses appear as they're generated, not after full completion |
 | **Gradle (Kotlin DSL)** | Faster incremental builds, type-safe build scripts, modern Spring standard |
-| **Dual-auth on AI Service** | Supports both internal service calls (X-Internal-Api-Key) and direct user API calls (X-User-Id) |
+| **Internal-key-only AI Service** | Its URL is public and every call costs LLM tokens, so only Topic Service (X-Internal-Api-Key) may call it; usage limits are enforced there |
 
 ---
 

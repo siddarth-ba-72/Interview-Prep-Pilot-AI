@@ -3,7 +3,7 @@ import re
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.auth import require_internal_api_key_or_user_id
+from app.auth import require_internal_api_key
 from app.llm import call_llm_json
 from app.prompts import (
     build_interview_plan_messages,
@@ -128,7 +128,7 @@ def _asked_questions(request: InterviewNextTurnRequest) -> list[str]:
 
 
 @router.post("/plan", response_model=InterviewPlanResponse)
-async def plan_interview(request: InterviewPlanRequest, _=Depends(require_internal_api_key_or_user_id)):
+async def plan_interview(request: InterviewPlanRequest, _=Depends(require_internal_api_key)):
     # Validate topic scope
     is_valid, error_msg = await validate_topic_scope(request.topic_name)
     if not is_valid:
@@ -150,7 +150,7 @@ async def plan_interview(request: InterviewPlanRequest, _=Depends(require_intern
 
 
 @router.post("/next-turn", response_model=InterviewNextTurnResponse)
-async def next_turn(request: InterviewNextTurnRequest, _=Depends(require_internal_api_key_or_user_id)):
+async def next_turn(request: InterviewNextTurnRequest, _=Depends(require_internal_api_key)):
     is_opening_turn = request.current_question is None or not request.current_question.question
     asked = _asked_questions(request)
     already_asked = {_normalize_for_compare(question) for question in asked}
@@ -252,7 +252,7 @@ async def next_turn(request: InterviewNextTurnRequest, _=Depends(require_interna
 
 
 @router.post("/generate-report", response_model=GenerateInterviewReportResponse)
-async def generate_report(request: GenerateInterviewReportRequest, _=Depends(require_internal_api_key_or_user_id)):
+async def generate_report(request: GenerateInterviewReportRequest, _=Depends(require_internal_api_key)):
     # Validate topic scope
     is_valid, error_msg = await validate_topic_scope(request.topic_name)
     if not is_valid:

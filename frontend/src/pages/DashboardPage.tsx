@@ -6,7 +6,10 @@ import api from '../api/axiosInstance'
 import { useNavigate } from 'react-router-dom'
 import { UserRoundPen } from 'lucide-react'
 import { createTopic, deleteTopic, extractErrorMessage, listTopics } from '../api/topics'
+import { USAGE_QUERY_KEY } from '../api/usage'
+import { useUsage } from '../features/usage/useUsage'
 import NewTopicForm from '../components/NewTopicForm'
+import UsageSummary from '../components/UsageSummary'
 import TopicList from '../components/TopicList'
 import AppHeader from '../components/AppHeader'
 import PageContainer from '../components/PageContainer'
@@ -20,12 +23,14 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const topicsQuery = useQuery({ queryKey: ['topics'], queryFn: listTopics })
+  const usageQuery = useUsage()
 
   const createMutation = useMutation({
     mutationFn: createTopic,
     onSuccess: () => {
       setCreateError(null)
       queryClient.invalidateQueries({ queryKey: ['topics'] })
+      queryClient.invalidateQueries({ queryKey: USAGE_QUERY_KEY })
     },
     onError: (error) => setCreateError(extractErrorMessage(error, 'Could not create topic')),
   })
@@ -34,7 +39,10 @@ export default function DashboardPage() {
     mutationFn: deleteTopic,
     onMutate: (topicId) => setDeletingId(topicId),
     onSettled: () => setDeletingId(null),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['topics'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['topics'] })
+      queryClient.invalidateQueries({ queryKey: USAGE_QUERY_KEY })
+    },
   })
 
   async function handleLogout() {
@@ -44,6 +52,8 @@ export default function DashboardPage() {
   }
 
   const topicCount = topicsQuery.data?.length ?? 0
+  const topicLimit = usageQuery.data?.topics.limit ?? null
+  const atTopicLimit = topicLimit !== null && topicsQuery.data !== undefined && topicCount >= topicLimit
 
   return (
     <div className="min-h-screen bg-bg">
@@ -77,12 +87,17 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {usageQuery.data && <UsageSummary usage={usageQuery.data} topicCount={topicCount} />}
+
         <NewTopicForm
           onCreate={async (name) => {
             await createMutation.mutateAsync(name).catch(() => null)
           }}
           isSubmitting={createMutation.isPending}
           error={createError}
+          disabledReason={
+            atTopicLimit ? `You can have up to ${topicLimit} topics. Delete a topic to add a new one.` : null
+          }
         />
 
         {topicsQuery.isLoading && <p className="text-sm text-muted">Loading topics...</p>}

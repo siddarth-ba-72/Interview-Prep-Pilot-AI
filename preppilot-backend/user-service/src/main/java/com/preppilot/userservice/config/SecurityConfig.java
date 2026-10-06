@@ -23,8 +23,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                // Sessions are needed only for the OAuth2 state handshake; all other auth
-                // is handled by the gateway (JWT validation + X-User-Id injection).
+                // Sessions are needed only for the OAuth2 state handshake. Access tokens are
+                // checked by the gateway and again by JwtAuthFilter for /api/v1/users/**.
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll()
                 )
