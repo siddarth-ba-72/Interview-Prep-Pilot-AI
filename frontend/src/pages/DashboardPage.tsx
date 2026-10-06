@@ -4,7 +4,7 @@ import { useAppSelector, useAppDispatch } from '../hooks'
 import { clearCredentials } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
 import { useNavigate } from 'react-router-dom'
-import { UserRoundPen } from 'lucide-react'
+import { CircleHelp, UserRoundPen } from 'lucide-react'
 import { createTopic, deleteTopic, extractErrorMessage, listTopics } from '../api/topics'
 import { USAGE_QUERY_KEY } from '../api/usage'
 import { useUsage } from '../features/usage/useUsage'
@@ -61,15 +61,26 @@ export default function DashboardPage() {
         userName={user?.displayName}
         onLogout={handleLogout}
         actions={
-          <button
-            type="button"
-            onClick={() => navigate('/onboarding')}
-            aria-label="Profile"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-          >
-            <UserRoundPen size={15} />
-            <span className="hidden sm:inline">Profile</span>
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => navigate('/how-it-works')}
+              aria-label="How it works"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+            >
+              <CircleHelp size={15} />
+              <span className="hidden sm:inline">How it works</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/onboarding')}
+              aria-label="Profile"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+            >
+              <UserRoundPen size={15} />
+              <span className="hidden sm:inline">Profile</span>
+            </button>
+          </>
         }
       />
 

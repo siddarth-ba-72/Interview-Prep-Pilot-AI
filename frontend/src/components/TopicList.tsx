@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { Topic } from '../api/topics'
 import TopicCard from './TopicCard'
 
@@ -12,6 +13,12 @@ export default function TopicList({ topics, onDelete, deletingId }: TopicListPro
     return (
       <div className="rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-14 text-center">
         <p className="text-sm font-medium text-muted">No topics yet. Add one above to get started.</p>
+        <p className="mt-2 text-sm text-muted">
+          New to PrepPilot?{' '}
+          <Link to="/how-it-works" className="font-semibold text-primary">
+            See how it works
+          </Link>
+        </p>
       </div>
     )
   }
