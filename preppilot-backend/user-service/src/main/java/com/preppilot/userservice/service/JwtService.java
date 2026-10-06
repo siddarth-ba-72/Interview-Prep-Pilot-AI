@@ -1,5 +1,7 @@
 package com.preppilot.userservice.service;
 
+import com.preppilot.userservice.model.User;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,12 +24,17 @@ public class JwtService {
         this.accessTokenExpiryMs = accessTokenExpiryMs;
     }
 
-    public String generateAccessToken(String userId, String email) {
+    public String generateAccessToken(User user) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpiryMs);
-        return Jwts.builder()
-                .claim("userId", userId)
-                .claim("email", email)
+        JwtBuilder builder = Jwts.builder()
+                .claim("userId", user.getId())
+                .claim("email", user.getEmail());
+        // The gateway forwards this as X-User-Experience; absent until onboarding is done
+        if (user.getExperienceLevel() != null) {
+            builder.claim("experienceLevel", user.getExperienceLevel().name());
+        }
+        return builder
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(signingKey)

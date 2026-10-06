@@ -24,7 +24,7 @@ async def _event_stream(request: LearnStreamRequest):
     # off-topic topic/message gets a normal, in-character decline as part of the token
     # stream below, rather than a separate pre-check that surfaces as a protocol-level
     # error. This keeps the UI showing a regular chat reply instead of an error banner.
-    messages = build_messages(request.topic_name, request.mode, request.messages)
+    messages = build_messages(request.topic_name, request.mode, request.messages, request.experience_level)
     try:
         async for token in stream_completion(messages):
             yield _sse_event({"token": token})

@@ -24,7 +24,9 @@ async def generate_questions(request: GenerateTestQuestionsRequest, _=Depends(re
         raise HTTPException(status_code=400, detail=error_msg)
 
     try:
-        messages = build_test_generation_messages(request.topic_name, request.strengths, request.weaknesses)
+        messages = build_test_generation_messages(
+            request.topic_name, request.strengths, request.weaknesses, request.experience_level
+        )
         response_text = await call_llm(messages)
         
         # Parse JSON response
@@ -80,7 +82,7 @@ async def evaluate_answers(request: EvaluateAnswersRequest, _=Depends(require_in
             for a in request.answers
         ]
         
-        messages = build_test_evaluation_messages(request.topic_name, answers)
+        messages = build_test_evaluation_messages(request.topic_name, answers, request.experience_level)
         response_text = await call_llm(messages)
         
         # Parse JSON response

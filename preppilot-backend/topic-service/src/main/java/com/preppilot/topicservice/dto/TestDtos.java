@@ -66,7 +66,8 @@ public class TestDtos {
     public record GenerateTestQuestionsRequest(
         String topicName,
         List<String> strengths,   // nullable; from previous attempt's report
-        List<String> weaknesses   // nullable; from previous attempt's report
+        List<String> weaknesses,  // nullable; from previous attempt's report
+        String experienceLevel    // nullable; the user's onboarding answer, e.g. "STUDENT"
     ) {}
 
     public record GenerateTestQuestionsResponse(
@@ -84,7 +85,8 @@ public class TestDtos {
 
     public record EvaluateAnswersRequest(
         String topicName,
-        List<AnswerForEvaluationRequest> answers
+        List<AnswerForEvaluationRequest> answers,
+        String experienceLevel    // nullable; the level the test was generated for
     ) {}
 
     public record AnswerForEvaluationRequest(

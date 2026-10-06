@@ -1,7 +1,10 @@
 package com.preppilot.userservice.dto;
 
+import com.preppilot.userservice.model.ExperienceLevel;
+import com.preppilot.userservice.model.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public class AuthDtos {
@@ -36,6 +39,23 @@ public class AuthDtos {
     public record UserProfile(
         String id,
         String email,
-        String displayName
+        String displayName,
+        String preferredDomain,
+        ExperienceLevel experienceLevel,
+        boolean onboardingCompleted
+    ) {
+        public static UserProfile from(User user) {
+            return new UserProfile(user.getId(), user.getEmail(), user.getDisplayName(),
+                    user.getPreferredDomain(), user.getExperienceLevel(), user.isOnboardingCompleted());
+        }
+    }
+
+    public record UpdateProfileRequest(
+        @NotBlank(message = "Preferred domain is required")
+        @Size(max = 100, message = "Preferred domain must be at most 100 characters")
+        String preferredDomain,
+
+        @NotNull(message = "Experience level is required")
+        ExperienceLevel experienceLevel
     ) {}
 }

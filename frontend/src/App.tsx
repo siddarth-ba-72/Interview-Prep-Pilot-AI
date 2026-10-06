@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
+import OnboardingPage from './pages/OnboardingPage'
 import LearnModePage from './pages/LearnModePage'
 import TestPage from './pages/TestPage'
 import TestReportPage from './pages/TestReportPage'
@@ -22,10 +23,19 @@ function ScrollToTop() {
   return null
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { accessToken, status } = useAppSelector((state) => state.auth)
+function ProtectedRoute({
+  children,
+  skipOnboardingCheck = false,
+}: {
+  children: React.ReactNode
+  skipOnboardingCheck?: boolean
+}) {
+  const { accessToken, status, user } = useAppSelector((state) => state.auth)
   if (status === 'loading') return null
-  return accessToken ? <>{children}</> : <Navigate to="/login" replace />
+  if (!accessToken) return <Navigate to="/login" replace />
+  // Users who have not answered the questionnaire yet (new sign-ups) answer it before anything else
+  if (!skipOnboardingCheck && user && !user.onboardingCompleted) return <Navigate to="/onboarding" replace />
+  return <>{children}</>
 }
 
 export default function App() {
@@ -38,6 +48,14 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute skipOnboardingCheck>
+              <OnboardingPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={

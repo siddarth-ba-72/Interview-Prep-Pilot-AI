@@ -37,6 +37,8 @@ public class MockInterviewService {
     private static final Set<Integer> ALLOWED_DURATIONS = Set.of(30, 45, 60);
     /** College students with no work experience - the AI Service keeps their questions mostly easy. */
     private static final String STUDENT_LEVEL = "STUDENT";
+    /** Recorded for student sessions; the AI Service picks each student question's level itself. */
+    private static final String STUDENT_DIFFICULTY = "EASY";
     private static final Set<String> ALLOWED_EXPERIENCE_LEVELS =
             Set.of(STUDENT_LEVEL, "JUNIOR", "INTERMEDIATE", "SENIOR", "MASTER", "ADVANCED");
     private static final Set<String> ALLOWED_DIFFICULTIES = Set.of("EASY", "MEDIUM", "HARD");
@@ -75,7 +77,13 @@ public class MockInterviewService {
 
     // ------------------------------------------------------------------ start / resume
 
-    public MockInterviewStartResponse startInterview(String userId, String topicId, StartInterviewRequest request) {
+    /**
+     * {@code profileExperienceLevel} is the user's onboarding answer (null if none). A user whose
+     * profile says STUDENT always gets a student interview: the UI locks the experience level and
+     * difficulty for them, and this keeps a hand-crafted request from getting around that.
+     */
+    public MockInterviewStartResponse startInterview(String userId, String topicId, StartInterviewRequest request,
+                                                     String profileExperienceLevel) {
         Topic topic = requireTopic(userId, topicId);
         String internalTopicId = topic.getId();
 
@@ -91,8 +99,13 @@ public class MockInterviewService {
             finalizeSession(session, MockInterviewSession.CompletionReason.TIME_EXPIRED);
         }
 
-        String experienceLevel = requireEnum(request.experienceLevel(), ALLOWED_EXPERIENCE_LEVELS, "experienceLevel");
-        String difficulty = requireEnum(request.difficulty(), ALLOWED_DIFFICULTIES, "difficulty");
+        boolean profileIsStudent = STUDENT_LEVEL.equals(profileExperienceLevel);
+        String experienceLevel = profileIsStudent
+                ? STUDENT_LEVEL
+                : requireEnum(request.experienceLevel(), ALLOWED_EXPERIENCE_LEVELS, "experienceLevel");
+        String difficulty = profileIsStudent
+                ? STUDENT_DIFFICULTY
+                : requireEnum(request.difficulty(), ALLOWED_DIFFICULTIES, "difficulty");
         if (request.durationMinutes() == null || !ALLOWED_DURATIONS.contains(request.durationMinutes())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_INTERVIEW_CONFIG",
                     "durationMinutes must be one of 30, 45, or 60");

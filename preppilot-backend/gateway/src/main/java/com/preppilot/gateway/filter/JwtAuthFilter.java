@@ -27,6 +27,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             "/actuator/health"
     );
 
+    private static final String EXPERIENCE_HEADER = "X-User-Experience";
+
     private final SecretKey signingKey;
 
     public JwtAuthFilter(@Value("${jwt.secret}") String jwtSecret) {
@@ -66,10 +68,19 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             }
             String userEmail = claims.get("email", String.class);
             if (userEmail == null) userEmail = "";
+            // Absent for users who have not finished onboarding (or hold a pre-onboarding token)
+            String experienceLevel = claims.get("experienceLevel", String.class);
 
             var mutatedRequest = exchange.getRequest().mutate()
                     .header("X-User-Id", userId)
                     .header("X-User-Email", userEmail)
+                    .headers(headers -> {
+                        // Only ever taken from the token, never from what the client sent
+                        headers.remove(EXPERIENCE_HEADER);
+                        if (experienceLevel != null) {
+                            headers.set(EXPERIENCE_HEADER, experienceLevel);
+                        }
+                    })
                     .build();
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build());

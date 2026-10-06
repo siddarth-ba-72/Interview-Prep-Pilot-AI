@@ -95,7 +95,7 @@ class MockInterviewServiceTest {
         when(aiClient.planInterview(anyString(), anyString(), anyString(), anyInt()))
                 .thenThrow(new RuntimeException("AI service unavailable"));
 
-        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("JUNIOR", "MEDIUM", 30));
+        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("JUNIOR", "MEDIUM", 30), null);
 
         assertNotNull(response.currentQuestion());
         assertFalse(response.resumed());
@@ -109,7 +109,7 @@ class MockInterviewServiceTest {
         when(aiClient.planInterview(anyString(), anyString(), anyString(), anyInt()))
                 .thenThrow(new RuntimeException("AI service unavailable"));
 
-        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("student", "EASY", 30));
+        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("student", "EASY", 30), null);
 
         assertEquals("STUDENT", response.config().experienceLevel());
         assertTrue(response.currentQuestion().question().contains("in your own words"));
@@ -117,11 +117,36 @@ class MockInterviewServiceTest {
     }
 
     @Test
+    void aStudentProfileOverridesTheRequestedLevelAndDifficulty() {
+        when(sessionRepository.findByTopicIdAndUserIdAndStatus(anyString(), anyString(), any())).thenReturn(Optional.empty());
+        when(aiClient.planInterview(anyString(), anyString(), anyString(), anyInt()))
+                .thenThrow(new RuntimeException("AI service unavailable"));
+
+        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("SENIOR", "HARD", 45), "STUDENT");
+
+        assertEquals("STUDENT", response.config().experienceLevel());
+        assertEquals("EASY", response.config().difficulty());
+        assertEquals(45, response.config().durationMinutes());
+    }
+
+    @Test
+    void anExperiencedProfileKeepsTheRequestedLevelAndDifficulty() {
+        when(sessionRepository.findByTopicIdAndUserIdAndStatus(anyString(), anyString(), any())).thenReturn(Optional.empty());
+        when(aiClient.planInterview(anyString(), anyString(), anyString(), anyInt()))
+                .thenThrow(new RuntimeException("AI service unavailable"));
+
+        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("SENIOR", "HARD", 30), "YEARS_5_8");
+
+        assertEquals("SENIOR", response.config().experienceLevel());
+        assertEquals("HARD", response.config().difficulty());
+    }
+
+    @Test
     void startInterviewRejectsAnUnknownExperienceLevel() {
         when(sessionRepository.findByTopicIdAndUserIdAndStatus(anyString(), anyString(), any())).thenReturn(Optional.empty());
 
         assertThrows(ApiException.class,
-                () -> service.startInterview("user-1", "topic-1", new StartInterviewRequest("WIZARD", "MEDIUM", 30)));
+                () -> service.startInterview("user-1", "topic-1", new StartInterviewRequest("WIZARD", "MEDIUM", 30), null));
     }
 
     @Test
@@ -129,7 +154,7 @@ class MockInterviewServiceTest {
         when(sessionRepository.findByTopicIdAndUserIdAndStatus(anyString(), anyString(), any())).thenReturn(Optional.empty());
 
         assertThrows(ApiException.class,
-                () -> service.startInterview("user-1", "topic-1", new StartInterviewRequest("SENIOR", "HARD", 25)));
+                () -> service.startInterview("user-1", "topic-1", new StartInterviewRequest("SENIOR", "HARD", 25), null));
     }
 
     @Test
@@ -137,7 +162,7 @@ class MockInterviewServiceTest {
         MockInterviewSession existing = inProgressSession("Explain bean scopes.", "Core IoC & Beans");
         when(sessionRepository.findByTopicIdAndUserIdAndStatus(anyString(), anyString(), any())).thenReturn(Optional.of(existing));
 
-        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("JUNIOR", "EASY", 60));
+        var response = service.startInterview("user-1", "topic-1", new StartInterviewRequest("JUNIOR", "EASY", 60), null);
 
         assertTrue(response.resumed());
         assertEquals("Explain bean scopes.", response.currentQuestion().question());

@@ -28,9 +28,11 @@ public class ChatController {
     }
 
     @GetMapping
-    public ResponseEntity<ChatSessionResponse> getOrCreate(@RequestHeader("X-User-Id") String userId,
-                                                            @PathVariable String topicId) {
-        return ResponseEntity.ok(chatSessionService.getOrCreate(userId, topicId));
+    public ResponseEntity<ChatSessionResponse> getOrCreate(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Experience", required = false) String experienceLevel,
+            @PathVariable String topicId) {
+        return ResponseEntity.ok(chatSessionService.getOrCreate(userId, topicId, experienceLevel));
     }
 
     @GetMapping("/messages")
@@ -44,10 +46,11 @@ public class ChatController {
 
     @PostMapping(value = "/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter sendMessage(@RequestHeader("X-User-Id") String userId,
+                                   @RequestHeader(value = "X-User-Experience", required = false) String experienceLevel,
                                    @PathVariable String topicId,
                                    @Valid @RequestBody SendMessageRequest request) {
         try {
-            return chatSessionService.streamReply(userId, topicId, request.content());
+            return chatSessionService.streamReply(userId, topicId, request.content(), experienceLevel);
         } catch (ApiException ex) {
             return errorEmitter(ex.getMessage());
         }

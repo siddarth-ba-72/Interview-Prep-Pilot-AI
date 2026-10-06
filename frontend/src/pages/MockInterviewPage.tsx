@@ -65,12 +65,15 @@ export default function MockInterviewPage() {
   const { topicId = '' } = useParams<{ topicId: string }>()
 
   const session = useAppSelector((state: RootState) => state.interviews.activeSessionByTopicId[topicId])
+  // A college student (per their onboarding answers) only picks the duration; the backend
+  // enforces the student level too.
+  const profileIsStudent = useAppSelector((state: RootState) => state.auth.user?.experienceLevel === 'STUDENT')
 
-  const [config, setConfig] = useState<InterviewConfig>({
-    experienceLevel: 'INTERMEDIATE',
-    difficulty: 'MEDIUM',
-    durationMinutes: 30,
-  })
+  const [config, setConfig] = useState<InterviewConfig>(
+    profileIsStudent
+      ? { experienceLevel: 'STUDENT', difficulty: 'EASY', durationMinutes: 30 }
+      : { experienceLevel: 'INTERMEDIATE', difficulty: 'MEDIUM', durationMinutes: 30 }
+  )
   // Students get a fixed mix of mostly easy questions, so the difficulty picker is pinned to Easy.
   const isStudent = config.experienceLevel === 'STUDENT'
   const [answer, setAnswer] = useState('')
@@ -296,8 +299,9 @@ export default function MockInterviewPage() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Choose your interview setup</h1>
               <p className="mt-1 text-sm text-muted">
-                One question at a time, on a hard clock. The bar for a strong answer is calibrated to the
-                experience level you pick.
+                {profileIsStudent
+                  ? 'One question at a time, on a hard clock. Questions are pitched for college students, so just pick how long you want to practise.'
+                  : 'One question at a time, on a hard clock. The bar for a strong answer is calibrated to the experience level you pick.'}
               </p>
             </div>
 
@@ -329,7 +333,11 @@ export default function MockInterviewPage() {
             <fieldset disabled={busy} className="flex flex-col gap-6">
               <div>
                 <legend className="text-sm font-bold text-fg">Experience level</legend>
-                <p className="mb-3 text-xs text-muted">Sets how much depth an answer needs to count as strong.</p>
+                <p className="mb-3 text-xs text-muted">
+                  {profileIsStudent
+                    ? 'Set from your profile: college student. You can change this from Profile on the dashboard.'
+                    : 'Sets how much depth an answer needs to count as strong.'}
+                </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {EXPERIENCE_LEVELS.map((level) => {
                     const selected = config.experienceLevel === level.value
@@ -337,6 +345,7 @@ export default function MockInterviewPage() {
                       <button
                         key={level.value}
                         type="button"
+                        disabled={profileIsStudent}
                         onClick={() =>
                           setConfig((current) => ({
                             ...current,
@@ -344,7 +353,7 @@ export default function MockInterviewPage() {
                             difficulty: level.value === 'STUDENT' ? 'EASY' : current.difficulty,
                           }))
                         }
-                        className={`rounded-xl border p-3 text-left transition-colors ${
+                        className={`rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                           selected
                             ? 'border-primary bg-primary-subtle'
                             : 'border-border bg-surface hover:bg-surface-hover'

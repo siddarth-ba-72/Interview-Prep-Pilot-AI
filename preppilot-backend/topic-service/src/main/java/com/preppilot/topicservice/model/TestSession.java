@@ -32,6 +32,8 @@ public class TestSession {
 
     private Boolean basedOnPreviousAttempt;  // true if question generation was biased by prior weaknesses
 
+    private String experienceLevel;  // user's onboarding answer when the test was generated; null if none
+
     @CreatedDate
     private Instant createdAt;
 
@@ -104,6 +106,7 @@ public class TestSession {
     public Integer getRawScore() { return rawScore; }
     public Integer getAttemptNumber() { return attemptNumber; }
     public Boolean getBasedOnPreviousAttempt() { return basedOnPreviousAttempt; }
+    public String getExperienceLevel() { return experienceLevel; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getCompletedAt() { return completedAt; }
 
@@ -114,5 +117,6 @@ public class TestSession {
     public void setRawScore(Integer rawScore) { this.rawScore = rawScore; }
     public void setAttemptNumber(Integer attemptNumber) { this.attemptNumber = attemptNumber; }
     public void setBasedOnPreviousAttempt(Boolean basedOnPreviousAttempt) { this.basedOnPreviousAttempt = basedOnPreviousAttempt; }
+    public void setExperienceLevel(String experienceLevel) { this.experienceLevel = experienceLevel; }
     public void setCompletedAt(Instant completedAt) { this.completedAt = completedAt; }
 }

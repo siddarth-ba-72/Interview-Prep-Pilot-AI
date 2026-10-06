@@ -23,6 +23,8 @@ class LearnStreamRequest(BaseModel):
     topic_name: str = Field(alias="topicName")
     mode: LearnMode
     messages: list[ChatMessage] = Field(default_factory=list)
+    # The user's onboarding answer (e.g. "STUDENT", "YEARS_3_5"); None if they have not given one
+    experience_level: str | None = Field(default=None, alias="experienceLevel")
 
     model_config = {"populate_by_name": True}
 
@@ -49,6 +51,7 @@ class GenerateTestQuestionsRequest(BaseModel):
     topic_name: str = Field(alias="topicName")
     strengths: list[str] | None = Field(default=None)  # from previous attempt's report
     weaknesses: list[str] | None = Field(default=None)  # from previous attempt's report
+    experience_level: str | None = Field(default=None, alias="experienceLevel")  # user's onboarding answer
 
     model_config = {"populate_by_name": True}
 
@@ -70,6 +73,7 @@ class AnswerForEvaluation(BaseModel):
 class EvaluateAnswersRequest(BaseModel):
     topic_name: str = Field(alias="topicName")
     answers: list[AnswerForEvaluation]
+    experience_level: str | None = Field(default=None, alias="experienceLevel")  # level the test was generated for
 
     model_config = {"populate_by_name": True}
 

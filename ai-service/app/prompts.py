@@ -49,6 +49,27 @@ FOLLOW_UP_INSTRUCTION = SCOPE_GUARD + (
     "directly to the student's latest message."
 )
 
+# Added to the Learn Mode system prompt when the user said at onboarding that they are a college
+# student. Everyone else gets the prompts above unchanged. It describes the learner and their goal
+# and leaves the teaching decisions to the model.
+STUDENT_LEARN_INSTRUCTION = (
+    "## This learner is a college student preparing for campus placements\n"
+    "They have no professional experience yet. Their goal is to clear campus placement drives: "
+    "online assessments followed by technical interviews. Decide for yourself how best to teach "
+    "them {topic_name}, guided by the following:\n"
+    "- Build up from the fundamentals in simple language. Define a term before you use it, and "
+    "prefer small, concrete examples and short code they can run themselves.\n"
+    "- Focus on what campus placement tests and interviews actually ask about {topic_name}: core "
+    "concepts, definitions, \"difference between X and Y\" questions, predicting the output of a "
+    "snippet, common coding patterns and classic textbook problems.\n"
+    "- Where it helps, show how a concept is typically asked in a placement interview, what a good "
+    "answer covers, and the mistakes students commonly make.\n"
+    "- Never assume work experience. Leave out production operations, large-scale architecture "
+    "and team practices unless they ask for them.\n"
+    "- Your clarifying questions can reflect their placement preparation, for example how soon "
+    "their placements are or which areas of {topic_name} they find hardest."
+)
+
 
 # Test Mode Prompts
 TEST_GENERATION_SYSTEM_PROMPT = (
@@ -110,6 +131,37 @@ RETEST_FRESH_INSTRUCTION = (
     "or go deeper into advanced areas, so the retest still feels new and challenging."
 )
 
+# Added after the generation instructions when the test taker is a college student. Placement
+# preparation is the whole point of the test for them, so it shapes both difficulty and style.
+STUDENT_TEST_GENERATION_INSTRUCTION = (
+    "## This test is for a college student preparing for campus placements\n"
+    "The student has no professional experience. Every question must help them clear campus "
+    "placement online assessments and technical interviews on {topic_name}. These rules override "
+    "any instruction above about the difficulty mix or about going deeper into advanced areas:\n"
+    "- Make the test slightly easier than a standard one: roughly 60% beginner and 40% "
+    "intermediate questions, with no advanced questions. A student who has studied {topic_name} "
+    "in coursework or tutorials must be able to answer every question.\n"
+    "- Prefer the question styles used in placement drives: core concept and definition checks, "
+    "\"difference between X and Y\", predict-the-output and find-the-bug snippets, and short "
+    "coding tasks of the kind asked in campus interviews.\n"
+    "- Do not ask about production operations, large-scale system design, performance tuning, "
+    "internals or team practices.\n"
+    "- Each MCQ tests one concept, with distractors drawn from mistakes students commonly make.\n"
+    "- Each subjective question must be answerable in a few sentences or a short piece of code. "
+    "Write each modelAnswer as a clear, fundamentals-first answer the student can learn from and "
+    "could give in a placement interview."
+)
+
+STUDENT_TEST_EVALUATION_INSTRUCTION = (
+    "The student is a college student preparing for campus placements, so judge each answer "
+    "against what a student is expected to know. For SUBJECTIVE answers, mark isCorrect true when "
+    "the core idea is right and clearly explained in their own words, even if the terminology is "
+    "imperfect or the answer is less complete than the reference; mark it false when the key "
+    "concept is wrong or missing. In each evaluation, name the one thing to revise for placement "
+    "interviews. Phrase strengths and weaknesses as specific concepts within the topic so the "
+    "student knows exactly what to study next."
+)
+
 TEST_EVALUATION_SYSTEM_PROMPT = (
     "You are an expert technical interviewer evaluating a student's test answers. "
     "For each question provided in the evaluation request, determine if the user's answer is correct (true/false), "
@@ -132,14 +184,23 @@ TEST_EVALUATION_SYSTEM_PROMPT = (
 )
 
 
-def build_messages(topic_name: str, mode: LearnMode, history: list[ChatMessage]) -> list[dict]:
+def build_messages(
+    topic_name: str,
+    mode: LearnMode,
+    history: list[ChatMessage],
+    experience_level: str | None = None,
+) -> list[dict]:
     instruction = {
         LearnMode.CLARIFY: CLARIFY_INSTRUCTION,
         LearnMode.GENERATE_CONTENT: GENERATE_CONTENT_INSTRUCTION,
         LearnMode.FOLLOW_UP: FOLLOW_UP_INSTRUCTION,
     }[mode].format(topic_name=topic_name)
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    system_content = SYSTEM_PROMPT
+    if _is_student(experience_level):
+        system_content += "\n\n" + STUDENT_LEARN_INSTRUCTION.format(topic_name=topic_name)
+
+    messages = [{"role": "system", "content": system_content}]
     for message in history:
         role = "assistant" if message.role == Role.AI else "user"
         messages.append({"role": role, "content": message.content})
@@ -151,13 +212,15 @@ def build_test_generation_messages(
     topic_name: str,
     strengths: list[str] | None = None,
     weaknesses: list[str] | None = None,
+    experience_level: str | None = None,
 ) -> list[dict]:
     """Build messages for test question generation.
 
     If `weaknesses` from a previous attempt are provided (non-empty), bias the generated
     questions toward reinforcing those weak areas with only light spaced-repetition on
     strengths. Otherwise (no previous attempt, or previous attempt had no weaknesses),
-    generate a fresh set of questions as usual.
+    generate a fresh set of questions as usual. A college student (`experience_level` STUDENT)
+    gets slightly easier, campus-placement style questions either way.
     """
     system_content = TEST_GENERATION_SYSTEM_PROMPT.format(topic_name=topic_name)
 
@@ -177,13 +240,19 @@ def build_test_generation_messages(
         system_content += "\n\n" + RETEST_FRESH_INSTRUCTION.format(topic_name=topic_name)
         user_content = f"Generate 10 MCQ and 10 SUBJECTIVE questions for {topic_name}."
 
+    if _is_student(experience_level):
+        system_content += "\n\n" + STUDENT_TEST_GENERATION_INSTRUCTION.format(topic_name=topic_name)
+        user_content += " Pitch them for a college student preparing for campus placements."
+
     return [
         {"role": "system", "content": system_content},
         {"role": "user", "content": user_content}
     ]
 
 
-def build_test_evaluation_messages(topic_name: str, answers: list[dict]) -> list[dict]:
+def build_test_evaluation_messages(
+    topic_name: str, answers: list[dict], experience_level: str | None = None
+) -> list[dict]:
     """Build messages for test answer evaluation."""
     answers_text = "\n".join([
         f"QuestionId: {a.get('questionId', f'Q{i+1}')}\n"
@@ -194,8 +263,12 @@ def build_test_evaluation_messages(topic_name: str, answers: list[dict]) -> list
         for i, a in enumerate(answers)
     ])
     
+    system_content = TEST_EVALUATION_SYSTEM_PROMPT
+    if _is_student(experience_level):
+        system_content += "\n\n" + STUDENT_TEST_EVALUATION_INSTRUCTION
+
     return [
-        {"role": "system", "content": TEST_EVALUATION_SYSTEM_PROMPT},
+        {"role": "system", "content": system_content},
         {"role": "user", "content": f"Topic: {topic_name}\nEvaluate these answers:\n\n{answers_text}"}
     ]
 
@@ -242,7 +315,7 @@ STUDENT_MEDIUM_EVERY = 5
 STUDENT_FIRST_MEDIUM = 4
 
 
-def _is_student(experience_level: str) -> bool:
+def _is_student(experience_level: str | None) -> bool:
     return (experience_level or "").strip().upper() == STUDENT_LEVEL
 
 

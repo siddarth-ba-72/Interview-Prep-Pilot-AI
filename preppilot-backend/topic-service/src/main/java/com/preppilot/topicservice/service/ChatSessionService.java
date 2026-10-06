@@ -49,12 +49,16 @@ public class ChatSessionService {
         this.mongoTemplate = mongoTemplate;
     }
 
-    /** Returns the session with the most recent PAGE_SIZE messages. */
-    public ChatSessionResponse getOrCreate(String userId, String topicId) {
+    /**
+     * Returns the session with the most recent PAGE_SIZE messages.
+     * {@code experienceLevel} is the user's onboarding answer (null if none); the AI Service
+     * pitches content for a STUDENT at campus-placement level.
+     */
+    public ChatSessionResponse getOrCreate(String userId, String topicId, String experienceLevel) {
         Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
                 .orElseThrow(() -> new TopicNotFoundException(topicId));
         ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topic.getId())
-                .orElseGet(() -> createSession(userId, topic));
+                .orElseGet(() -> createSession(userId, topic, experienceLevel));
         return toPagedResponse(session, topicId);
     }
 
@@ -95,8 +99,8 @@ public class ChatSessionService {
         return new PagedMessagesResponse(messages, hasMore);
     }
 
-    private ChatSession createSession(String userId, Topic topic) {
-        String clarifyContent = aiClient.streamLearn(topic.getName(), MODE_CLARIFY, List.of())
+    private ChatSession createSession(String userId, Topic topic, String experienceLevel) {
+        String clarifyContent = aiClient.streamLearn(topic.getName(), MODE_CLARIFY, List.of(), experienceLevel)
                 .collect(StringBuilder::new, StringBuilder::append)
                 .map(StringBuilder::toString)
                 .block();
@@ -106,7 +110,7 @@ public class ChatSessionService {
         return chatSessionRepository.save(session);
     }
 
-    public SseEmitter streamReply(String userId, String topicId, String userContent) {
+    public SseEmitter streamReply(String userId, String topicId, String userContent, String experienceLevel) {
         Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
                 .orElseThrow(() -> new TopicNotFoundException(topicId));
         ChatSession session = chatSessionRepository.findByUserIdAndTopicId(userId, topic.getId())
@@ -125,7 +129,7 @@ public class ChatSessionService {
         SseEmitter emitter = new SseEmitter(0L);
         StringBuilder buffer = new StringBuilder();
 
-        aiClient.streamLearn(topic.getName(), mode, history).subscribe(
+        aiClient.streamLearn(topic.getName(), mode, history, experienceLevel).subscribe(
                 token -> {
                     buffer.append(token);
                     sendEvent(emitter, Map.of("token", token));

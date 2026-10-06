@@ -120,7 +120,7 @@ public class AuthService {
 
     public TokenPair issueTokens(User user) {
         String userId = user.getId();
-        String accessToken = jwtService.generateAccessToken(userId, user.getEmail());
+        String accessToken = jwtService.generateAccessToken(user);
 
         String rawRefreshToken = UUID.randomUUID().toString();
         String tokenHash = hashToken(rawRefreshToken);
@@ -147,8 +147,14 @@ public class AuthService {
         }
     }
 
+    /** A fresh access token without rotating the refresh token, so claims that changed
+     * (e.g. the experience level after onboarding) take effect immediately. */
+    public AuthResponse reissueAccessToken(User user) {
+        return new AuthResponse(jwtService.generateAccessToken(user), toProfile(user));
+    }
+
     private UserProfile toProfile(User user) {
-        return new UserProfile(user.getId(), user.getEmail(), user.getDisplayName());
+        return UserProfile.from(user);
     }
 
     public record TokenPair(AuthResponse authResponse, String rawRefreshToken) {}

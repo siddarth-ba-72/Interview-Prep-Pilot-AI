@@ -1,26 +1,41 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useAppDispatch } from '../hooks'
+import { setCredentials } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
+import type { AuthResponse } from '../api/profile'
 import AuthShell from '../components/AuthShell'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErrorMsg('')
+    setSubmitting(true)
     try {
       await api.post('/auth/register', { email, password, displayName })
-      navigate('/login')
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Registration failed.'
       setErrorMsg(msg)
+      setSubmitting(false)
+      return
+    }
+    // Sign the new account straight in so the onboarding questionnaire comes next
+    try {
+      const { data } = await api.post<AuthResponse>('/auth/login', { email, password })
+      dispatch(setCredentials({ user: data.user, accessToken: data.accessToken }))
+      navigate('/onboarding')
+    } catch {
+      navigate('/login')
     }
   }
 
@@ -77,9 +92,10 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          className="mt-1 flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover"
+          disabled={submitting}
+          className="mt-1 flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Register
+          {submitting ? 'Creating your account…' : 'Register'}
         </button>
       </form>
     </AuthShell>

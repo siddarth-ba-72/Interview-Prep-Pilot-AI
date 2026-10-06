@@ -4,6 +4,7 @@ import { useAppSelector, useAppDispatch } from '../hooks'
 import { clearCredentials } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
 import { useNavigate } from 'react-router-dom'
+import { UserRoundPen } from 'lucide-react'
 import { createTopic, deleteTopic, extractErrorMessage, listTopics } from '../api/topics'
 import NewTopicForm from '../components/NewTopicForm'
 import TopicList from '../components/TopicList'
@@ -46,7 +47,21 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader userName={user?.displayName} onLogout={handleLogout} />
+      <AppHeader
+        userName={user?.displayName}
+        onLogout={handleLogout}
+        actions={
+          <button
+            type="button"
+            onClick={() => navigate('/onboarding')}
+            aria-label="Profile"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+          >
+            <UserRoundPen size={15} />
+            <span className="hidden sm:inline">Profile</span>
+          </button>
+        }
+      />
 
       <PageContainer className="flex flex-col gap-7">
         <div className="flex items-center justify-between gap-4">

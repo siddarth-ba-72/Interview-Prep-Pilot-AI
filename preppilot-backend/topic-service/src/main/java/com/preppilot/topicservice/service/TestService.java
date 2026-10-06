@@ -35,8 +35,10 @@ public class TestService {
     /**
      * Starts a new test session for a topic.
      * Returns existing IN_PROGRESS test if one exists (idempotent).
+     * {@code experienceLevel} is the user's onboarding answer (null if none); a STUDENT gets
+     * campus-placement level questions, and the level is kept so grading uses the same bar.
      */
-    public TestSessionStartResponse startTest(String userId, String topicId) {
+    public TestSessionStartResponse startTest(String userId, String topicId, String experienceLevel) {
         Topic topic = topicRepository.findByPublicIdAndUserId(topicId, userId)
                 .orElseThrow(() -> new TopicNotFoundException(topicId));
         String internalTopicId = topic.getId();
@@ -62,12 +64,14 @@ public class TestService {
                 && weaknesses != null && !weaknesses.isEmpty();
 
         // Generate questions from AI
-        GenerateTestQuestionsResponse aiResponse = aiClient.generateTestQuestions(topic.getName(), strengths, weaknesses);
+        GenerateTestQuestionsResponse aiResponse =
+                aiClient.generateTestQuestions(topic.getName(), strengths, weaknesses, experienceLevel);
 
         // Create and save test session with questions
         TestSession session = new TestSession(internalTopicId, userId);
         session.setAttemptNumber(attemptNumber);
         session.setBasedOnPreviousAttempt(basedOnPreviousAttempt);
+        session.setExperienceLevel(experienceLevel);
         List<TestSession.Question> questions = aiResponse.questions().stream()
                 .map(q -> new TestSession.Question(
                         q.questionId(),
@@ -137,7 +141,7 @@ public class TestService {
         // Call AI to evaluate
         EvaluateAnswersResponse aiEvaluation = aiClient.evaluateAnswers(
                 topic.getName(),
-                new EvaluateAnswersRequest(topic.getName(), answersForEval)
+                new EvaluateAnswersRequest(topic.getName(), answersForEval, session.getExperienceLevel())
         );
 
         // Build answers with scoring

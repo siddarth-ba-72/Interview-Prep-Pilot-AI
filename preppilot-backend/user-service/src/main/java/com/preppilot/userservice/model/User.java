@@ -26,6 +26,11 @@ public class User {
 
     private String displayName;
 
+    // Onboarding questionnaire answers; both stay null until the user completes it
+    private String preferredDomain;
+
+    private ExperienceLevel experienceLevel;
+
     @CreatedDate
     private Instant createdAt;
 
@@ -49,8 +54,13 @@ public class User {
     public AuthProvider getAuthProvider() { return authProvider; }
     public String getGoogleId() { return googleId; }
     public String getDisplayName() { return displayName; }
+    public String getPreferredDomain() { return preferredDomain; }
+    public ExperienceLevel getExperienceLevel() { return experienceLevel; }
+    public boolean isOnboardingCompleted() { return experienceLevel != null; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
     public void setGoogleId(String googleId) { this.googleId = googleId; }
+    public void setPreferredDomain(String preferredDomain) { this.preferredDomain = preferredDomain; }
+    public void setExperienceLevel(ExperienceLevel experienceLevel) { this.experienceLevel = experienceLevel; }
 }

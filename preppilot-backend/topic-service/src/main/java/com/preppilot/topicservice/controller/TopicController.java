@@ -50,9 +50,11 @@ public class TopicController {
     // Test Mode Endpoints
 
     @PostMapping("/{topicId}/tests")
-    public ResponseEntity<TestSessionStartResponse> startTest(@RequestHeader("X-User-Id") String userId,
-                                                              @PathVariable String topicId) {
-        TestSessionStartResponse response = testService.startTest(userId, topicId);
+    public ResponseEntity<TestSessionStartResponse> startTest(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Experience", required = false) String experienceLevel,
+            @PathVariable String topicId) {
+        TestSessionStartResponse response = testService.startTest(userId, topicId, experienceLevel);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -91,10 +93,13 @@ public class TopicController {
     // Mock Interview Endpoints
 
     @PostMapping("/{topicId}/interviews")
-    public ResponseEntity<MockInterviewStartResponse> startInterview(@RequestHeader("X-User-Id") String userId,
-                                                                      @PathVariable String topicId,
-                                                                      @RequestBody StartInterviewRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(mockInterviewService.startInterview(userId, topicId, request));
+    public ResponseEntity<MockInterviewStartResponse> startInterview(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader(value = "X-User-Experience", required = false) String profileExperienceLevel,
+            @PathVariable String topicId,
+            @RequestBody StartInterviewRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(mockInterviewService.startInterview(userId, topicId, request, profileExperienceLevel));
     }
 
     @GetMapping("/{topicId}/interviews/{sessionId}")

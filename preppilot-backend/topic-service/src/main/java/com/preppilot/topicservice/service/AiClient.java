@@ -28,6 +28,7 @@ import reactor.core.publisher.Flux;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,13 +54,15 @@ public class AiClient {
     }
 
     /** Streams tokens for a Learn Mode response. Completes normally on [DONE],
-     * errors with {@link AiStreamException} if the AI Service reports an error. */
-    public Flux<String> streamLearn(String topicName, String mode, List<ChatMessagePayload> messages) {
-        Map<String, Object> body = Map.of(
-                "topicName", topicName,
-                "mode", mode,
-                "messages", messages
-        );
+     * errors with {@link AiStreamException} if the AI Service reports an error.
+     * {@code experienceLevel} is the user's onboarding answer, or null if they have none. */
+    public Flux<String> streamLearn(String topicName, String mode, List<ChatMessagePayload> messages,
+                                    String experienceLevel) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("topicName", topicName);
+        body.put("mode", mode);
+        body.put("messages", messages);
+        body.put("experienceLevel", experienceLevel);
 
         return aiWebClient.post()
                 .uri("/ai/learn/stream")
@@ -109,8 +112,10 @@ public class AiClient {
     /** Generates test questions (MCQ and Subjective) for a topic.
      * If strengths/weaknesses from a previous attempt are provided, the AI will bias
      * question selection toward the weak areas (with light spaced-repetition on strengths). */
-    public GenerateTestQuestionsResponse generateTestQuestions(String topicName, List<String> strengths, List<String> weaknesses) {
-        GenerateTestQuestionsRequest body = new GenerateTestQuestionsRequest(topicName, strengths, weaknesses);
+    public GenerateTestQuestionsResponse generateTestQuestions(String topicName, List<String> strengths,
+                                                               List<String> weaknesses, String experienceLevel) {
+        GenerateTestQuestionsRequest body =
+                new GenerateTestQuestionsRequest(topicName, strengths, weaknesses, experienceLevel);
 
         return aiWebClient.post()
                 .uri("/ai/test/generate")

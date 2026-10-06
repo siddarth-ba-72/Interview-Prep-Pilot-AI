@@ -1,22 +1,18 @@
 import axios from 'axios'
 import { getApiBaseUrl } from './config'
+import type { AuthResponse } from './profile'
 
-export interface RefreshResponse {
-  user: { id: string; email: string; displayName: string }
-  accessToken: string
-}
-
-let inFlight: Promise<RefreshResponse> | null = null
+let inFlight: Promise<AuthResponse> | null = null
 
 /**
  * Exchange the HttpOnly refresh token cookie for a new access token.
  * Concurrent callers share one request: the server rotates the refresh token,
  * so parallel requests carrying the same cookie would race each other.
  */
-export function refreshSession(): Promise<RefreshResponse> {
+export function refreshSession(): Promise<AuthResponse> {
   if (!inFlight) {
     inFlight = axios
-      .post<RefreshResponse>(`${getApiBaseUrl()}/auth/refresh`, {}, { withCredentials: true })
+      .post<AuthResponse>(`${getApiBaseUrl()}/auth/refresh`, {}, { withCredentials: true })
       .then(({ data }) => data)
       .finally(() => {
         inFlight = null
