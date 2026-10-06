@@ -54,22 +54,24 @@ Simulate real interview conditions with AI evaluation:
 - **Vite** - Lightning-fast build tool with native TypeScript support
 
 ### Backend Services
-- **API Gateway** - Spring Cloud Gateway
-  - Routes all client traffic
-  - JWT validation and token-based authentication
-  - CORS handling and rate limiting
-  
-- **User Service** - Spring Boot 4.x with Java 21
-  - User registration and login (email/password)
-  - Google OAuth 2.0 integration
-  - JWT token management and refresh tokens
-  
-- **Topic Service** - Spring Boot 4.x with Java 21
+All four services are Python 3.12 / FastAPI, each in its own folder at the repository root.
+
+- **API Gateway** (`gateway/`) - FastAPI + httpx
+  - The only service the browser talks to; streams responses through (SSE-safe)
+  - Verifies the JWT on every protected request, then strips any client-supplied `X-User-Id` / `X-User-Email` / `X-Internal-Api-Key` and injects the real `X-User-*` headers
+  - CORS handling (rate limiting is not implemented)
+
+- **User Service** (`user-service/`) - FastAPI + PyMongo (async)
+  - User registration and login (email/password, bcrypt)
+  - Google OAuth 2.0 integration (hand-rolled authorization-code flow)
+  - JWT access tokens and rotating refresh tokens
+
+- **Topic Service** (`topic-service/`) - FastAPI + PyMongo (async)
   - Topic management and CRUD operations
-  - Chat session persistence (Learn mode)
+  - Chat session persistence (Learn mode, SSE)
   - Test and interview session management
   - Report generation and storage
-  
+
 - **AI Service** - FastAPI (Python)
   - Stateless AI orchestration
   - LLM integration (GPT-4o by default)
@@ -83,7 +85,7 @@ Simulate real interview conditions with AI evaluation:
 
 ### Infrastructure
 - **Docker & Docker Compose** - Containerization and local orchestration
-- **Gradle** - Build tool for Java services (with Kotlin DSL)
+- **pytest / ruff** - Tests and linting for the Python services
 - **NGINX** - Web server for frontend in production
 
 ---
@@ -99,21 +101,21 @@ Simulate real interview conditions with AI evaluation:
                          │ HTTPS / SSE
          ┌───────────────▼───────────────┐
          │   API Gateway (Port: 8080)    │
-         │   Spring Cloud Gateway        │
+         │   FastAPI                     │
          │  - JWT Validation             │
          │  - Request Routing            │
-         │  - CORS & Rate Limiting       │
-         └───┬──────────────┬────────┬───┘
-             │              │        │
-   ┌─────────▼──────┐ ┌────▼──────────┐ ┌──────────┐
-   │ User Service   │ │ Topic Service  │ │ AI Svc   │
-   │  Port: 8081    │ │  Port: 8082    │ │ P: 8000  │
-   │  - Auth        │ │  - Topics      │ │(Internal)│
-   │  - User Mgmt   │ │  - Sessions    │ │- LLM     │
-   │  - OAuth       │ │  - Reports     │ │- Streams │
-   └────────┬───────┘ └────┬──────────┘ └──────────┘
-            │              │  (internal API key)
-            └──────┬───────┘
+         │  - CORS                       │
+         └───────┬──────────────┬────────┘
+                 │              │
+       ┌─────────▼──────┐ ┌─────▼─────────┐      ┌──────────┐
+       │ User Service   │ │ Topic Service │ ───► │ AI Svc   │
+       │  Port: 8081    │ │  Port: 8082   │ key  │ P: 8000  │
+       │  - Auth        │ │  - Topics     │      │(Internal)│
+       │  - User Mgmt   │ │  - Sessions   │      │- LLM     │
+       │  - OAuth       │ │  - Reports    │      │- Streams │
+       └────────┬───────┘ └─────┬─────────┘      └──────────┘
+                │               │
+                └──────┬────────┘
                    │
          ┌─────────▼──────────────┐
          │  MongoDB (Port 27017)  │
@@ -121,6 +123,10 @@ Simulate real interview conditions with AI evaluation:
          │  - topics_db           │
          └────────────────────────┘
 ```
+
+Only the gateway (8080), the frontend (3000) and MongoDB (27017, for debugging) are published to the host.
+The user, topic and AI services are reachable only on the Docker network, which is what makes it safe for them to
+trust the `X-User-Id` header the gateway injects. The browser never calls the AI service; only the topic service does.
 
 ### Request Flow Diagrams
 
@@ -194,8 +200,7 @@ graph LR
 ### System Requirements
 - **Docker** (version 20.10+) and **Docker Compose** (version 2.0+)
 - **Node.js** (version 18+) for frontend development
-- **Java 21** for backend development
-- **Python 3.10+** for AI service development
+- **Python 3.12** for backend development (gateway, user, topic and AI services)
 - **Git** for version control
 
 ### Required API Keys & Accounts
@@ -211,57 +216,56 @@ Each service requires a `.env` file with configuration. Copy the `.env.example` 
 
 ### 1. Root-Level Environment (`.env`)
 ```bash
-# MongoDB credentials (used by docker-compose)
+# MongoDB credentials (used by docker compose; the defaults are root / change_me)
 MONGO_ROOT_USER=admin
 MONGO_ROOT_PASSWORD=securepassword123
 ```
 
 ### 2. Gateway (`.env`)
-Located in `preppilot-backend/gateway/.env`
+Located in `gateway/.env` (copy from `gateway/.env.example`)
 ```bash
-# Core gateway config
-JWT_SECRET=your-super-secret-key-change-this-in-prod
-FRONTEND_ORIGIN=http://localhost:3000
+# Must be identical to the user service's JWT_SECRET, and at least 32 bytes
+JWT_SECRET=your-super-secret-key-at-least-32-bytes-long
+FRONTEND_ORIGIN=http://localhost:3000   # CORS; comma-separated list allowed
 
-# Downstream service URLs
-USER_SERVICE_URL=http://user-service:8081
-TOPIC_SERVICE_URL=http://topic-service:8082
-AI_SERVICE_URL=http://ai-service:8000
-
-# Spring Boot config
-SERVER_PORT=8080
+# Downstream services (docker compose overrides these with container hostnames)
+USER_SERVICE_URL=http://localhost:8081
+TOPIC_SERVICE_URL=http://localhost:8082
+UPSTREAM_READ_TIMEOUT_SECONDS=300
+LOG_LEVEL=INFO
 ```
 
 ### 3. User Service (`.env`)
-Located in `preppilot-backend/user-service/.env`
+Located in `user-service/.env`
 ```bash
-# Database
-MONGODB_URI=mongodb://admin:securepassword123@mongodb:27017/users_db?authSource=admin
+# Database (docker compose overrides the URI with the container hostname)
+MONGODB_URI=mongodb://root:change_me@localhost:27017/?authSource=admin
+MONGODB_DB=users_db
 
 # Authentication
-JWT_SECRET=your-super-secret-key-change-this-in-prod
-FRONTEND_ORIGIN=http://localhost:3000
+JWT_SECRET=your-super-secret-key-at-least-32-bytes-long   # same as the gateway's
+ACCESS_TOKEN_EXPIRY_SECONDS=1800
+REFRESH_TOKEN_EXPIRY_DAYS=30
+FRONTEND_ORIGIN=http://localhost:3000     # a single origin: OAuth redirect_uri and post-login redirects
+COOKIE_SECURE=true                        # false only if a browser refuses Secure cookies on http://localhost
 
 # Google OAuth
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Spring Boot config
-SERVER_PORT=8081
+LOG_LEVEL=INFO
 ```
 
 ### 4. Topic Service (`.env`)
-Located in `preppilot-backend/topic-service/.env`
+Located in `topic-service/.env`
 ```bash
 # Database
-MONGODB_URI=mongodb://admin:securepassword123@mongodb:27017/topics_db?authSource=admin
+MONGODB_URI=mongodb://root:change_me@localhost:27017/?authSource=admin
+MONGODB_DB=topics_db
 
 # AI Service communication
-INTERNAL_API_KEY=your-internal-api-secret-key
-AI_SERVICE_URL=http://ai-service:8000
-
-# Spring Boot config
-SERVER_PORT=8082
+AI_SERVICE_URL=http://localhost:8000
+INTERNAL_API_KEY=your-internal-api-secret-key   # must equal ai-service's INTERNAL_API_KEY
+LOG_LEVEL=INFO
 ```
 
 ### 5. AI Service (`.env`)
@@ -286,6 +290,9 @@ Located in `frontend/.env`
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
+**Invariants**: `JWT_SECRET` must be identical in `gateway/.env` and `user-service/.env` (at least 32 bytes), and
+`INTERNAL_API_KEY` must be identical in `topic-service/.env` and `ai-service/.env`.
+
 **Important**: All `.env` files are in `.gitignore`. Never commit real secrets to the repository.
 
 ---
@@ -293,6 +300,10 @@ VITE_API_BASE_URL=http://localhost:8080
 ## Getting Started
 
 ### Option 1: Docker Compose (Recommended - Full Stack)
+
+> `docker-compose.python.yml` is the Python stack. `docker-compose.yml` and `preppilot-backend/` are the legacy
+> Spring Boot implementation, kept until the migration is signed off (see `specs/Python-Backend-Migration-Plan.md`).
+> Both stacks use ports 8080/3000/27017, so run only one at a time.
 
 **Best for:** Testing all services together, end-to-end testing
 
@@ -302,7 +313,7 @@ VITE_API_BASE_URL=http://localhost:8080
 # 1. Set up all .env files (see Environment Setup section)
 
 # 2. Build and start all services
-docker-compose up --build
+docker compose -f docker-compose.python.yml up --build
 
 # 3. Access the application
 # Frontend:    http://localhost:3000
@@ -313,19 +324,19 @@ docker-compose up --build
 **Useful Docker Compose commands:**
 ```bash
 # Stop all services
-docker-compose down
+docker compose -f docker-compose.python.yml down
 
 # View logs from all services
-docker-compose logs -f
+docker compose -f docker-compose.python.yml logs -f
 
 # View logs from specific service
-docker-compose logs -f frontend
+docker compose -f docker-compose.python.yml logs -f frontend
 
 # Rebuild without cache
-docker-compose up --build --no-cache
+docker compose -f docker-compose.python.yml build --no-cache
 
 # Remove volumes (fresh database)
-docker-compose down -v
+docker compose -f docker-compose.python.yml down -v
 ```
 
 ---
@@ -357,25 +368,29 @@ npm run lint
 npm run format
 ```
 
-#### Java Services (Gateway, User Service, Topic Service)
+#### Python Services (Gateway, User Service, Topic Service)
 ```bash
-cd preppilot-backend/gateway  # or user-service or topic-service
+cd gateway            # or user-service or topic-service
 
-# Build the service
-./gradlew build
+# One-time setup
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+cp .env.example .env  # then fill in the values
 
-# Run locally
-./gradlew bootRun
+# Run with auto-reload (gateway :8080, user-service :8081, topic-service :8082)
+uvicorn app.main:app --reload --port 8081
 
-# Run tests
-./gradlew test
-
-# Run specific test
-./gradlew test --tests "com.preppilot.gateway.SomeTest"
-
-# Clean build
-./gradlew clean build
+# Lint and test
+ruff check .
+pytest
 ```
+The user and topic services' integration tests use a real MongoDB (`TEST_MONGODB_URI`, default
+`mongodb://root:change_me@localhost:27017/?authSource=admin`; they skip with a message if it is unreachable).
+Start one with `docker compose -f docker-compose.python.yml up -d mongodb`. The AI service is always mocked in tests.
+
+#### Black-box contract tests
+`contract-tests/` runs against the whole stack through the gateway (see its README). Its `ai`-marked tests call the
+real LLM, so run `pytest -m "not ai"` to skip them.
 
 #### AI Service
 ```bash
@@ -410,16 +425,16 @@ git clone <repo-url>
 cd int-prep-ai
 
 # 2. Set up environment files
-cp preppilot-backend/gateway/.env.example preppilot-backend/gateway/.env
-cp preppilot-backend/user-service/.env.example preppilot-backend/user-service/.env
-cp preppilot-backend/topic-service/.env.example preppilot-backend/topic-service/.env
+cp gateway/.env.example gateway/.env
+cp user-service/.env.example user-service/.env
+cp topic-service/.env.example topic-service/.env
 cp ai-service/.env.example ai-service/.env
 cp frontend/.env.example frontend/.env
 
 # 3. Fill in real values in .env files (API keys, secrets, etc.)
 
 # 4. Start the full stack
-docker-compose up --build
+docker compose -f docker-compose.python.yml up --build
 
 # 5. Access at http://localhost:3000
 ```
@@ -429,14 +444,14 @@ docker-compose up --build
 #### View service logs
 ```bash
 # All services
-docker-compose logs -f
+docker compose -f docker-compose.python.yml logs -f
 
 # Specific service
-docker-compose logs -f topic-service
-docker-compose logs -f ai-service
+docker compose -f docker-compose.python.yml logs -f topic-service
+docker compose -f docker-compose.python.yml logs -f ai-service
 
 # Follow new logs only
-docker-compose logs -f --tail=50
+docker compose -f docker-compose.python.yml logs -f --tail=50
 ```
 
 #### Database inspection
@@ -474,13 +489,13 @@ curl -H "Authorization: Bearer <your-jwt-token>" \
 
 ### Reliability
 - **Persistent Chat & Reports**: All user data persisted to MongoDB immediately after generation
-- **Service Health Checks**: Each service exposes `/actuator/health` or `/health`
+- **Service Health Checks**: Each service exposes `/health`
 - **Error Consistency**: Standardized error response format across all services
 
 ### Development Experience
 - **Docker Compose**: Single command to spin up entire stack locally
 - **Hot-Reload**: Frontend and AI service support live development
-- **Type Safety**: TypeScript frontend + Kotlin DSL Gradle scripts + Java generics
+- **Type Safety**: TypeScript frontend + typed Pydantic models in every Python service
 
 ---
 
@@ -498,10 +513,10 @@ kill -9 <PID>
 ### Docker Container Issues
 ```bash
 # Remove all containers and volumes
-docker-compose down -v
+docker compose -f docker-compose.python.yml down -v
 
 # Rebuild from scratch
-docker-compose up --build
+docker compose -f docker-compose.python.yml up --build
 
 # Check for disk space (Docker can run out of space)
 docker system prune -a
@@ -510,25 +525,25 @@ docker system prune -a
 ### MongoDB Connection Errors
 ```bash
 # Verify MongoDB is running
-docker-compose ps mongodb
+docker compose -f docker-compose.python.yml ps mongodb
 
 # Check logs
-docker-compose logs mongodb
+docker compose -f docker-compose.python.yml logs mongodb
 
 # Reset database
-docker-compose down -v
-docker-compose up mongodb
+docker compose -f docker-compose.python.yml down -v
+docker compose -f docker-compose.python.yml up mongodb
 ```
 
 ### Frontend Can't Connect to API
 - Ensure `VITE_API_BASE_URL` in `frontend/.env` matches Gateway URL
-- Ensure Gateway is running: `curl http://localhost:8080/actuator/health`
+- Ensure Gateway is running: `curl http://localhost:8080/health`
 - Check browser console for CORS errors
 
 ### AI Service Not Responding
 - Verify `LLM_API_KEY` is correct in `ai-service/.env`
 - Check OpenAI API quota and billing
-- Review AI service logs: `docker-compose logs -f ai-service`
+- Review AI service logs: `docker compose -f docker-compose.python.yml logs -f ai-service`
 
 ---
 
@@ -539,6 +554,10 @@ to their own AWS EC2 instance via GitHub Actions. `cache-service` is a shared
 library module (no `bootJar`) consumed by the other three — it is never
 deployed on its own, but changes to it trigger all three deploy pipelines
 since they depend on it.
+
+> **Note:** these pipelines still build and deploy the legacy Spring Boot services in `preppilot-backend/`.
+> Deploying the Python services (`gateway/`, `user-service/`, `topic-service/`) is not part of the backend migration
+> and has not been set up yet, so deployment is unchanged.
 
 ### Pipeline overview
 
@@ -627,14 +646,14 @@ See `deploy/README.md` for the full reference.
 
 ### Code Standards
 - **Frontend**: TypeScript, ESLint, Prettier
-- **Java Services**: Google Java Style Guide, Gradle formatted
-- **Python**: Black formatting, mypy type checking
+- **Python services**: `ruff check .` (line length 120) and `pytest` in each service folder
+- **Legacy Java services** (`preppilot-backend/`): Google Java Style Guide, Gradle formatted
 - **Git Commits**: Write clear, descriptive commit messages
 
 ### Pull Request Process
 1. Create feature branch: `git checkout -b feature/your-feature`
 2. Make changes and commit with clear messages
-3. Ensure tests pass: `npm test` (frontend), `./gradlew test` (Java), `pytest` (Python)
+3. Ensure tests pass: `npm test` (frontend), `pytest` + `ruff check .` in each Python service, `./gradlew test` (legacy Java)
 4. Push and create pull request
 5. Address review feedback
 6. Merge to main
