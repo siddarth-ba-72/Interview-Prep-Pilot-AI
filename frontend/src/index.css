@@ -137,4 +137,93 @@
   .animate-modal-pop {
     animation: modal-pop 0.18s ease-out;
   }
+
+  /* How it works page */
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+
+  @keyframes word-in {
+    from {
+      opacity: 0;
+      transform: translateY(55%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes grow-x {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes flow {
+    to {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes caret {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-pop-in {
+    animation: pop-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .animate-float {
+    animation: float 7s ease-in-out infinite;
+  }
+
+  .animate-word-in {
+    animation: word-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .animate-grow-x {
+    animation: grow-x linear forwards;
+    transform-origin: left;
+  }
+
+  .animate-flow {
+    background-size: 200% 100%;
+    animation: flow 2.4s linear infinite;
+  }
+
+  .animate-caret {
+    animation: caret 1s step-end infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-float,
+    .animate-flow,
+    .animate-word-in,
+    .animate-pop-in {
+      animation: none;
+    }
+  }
 }

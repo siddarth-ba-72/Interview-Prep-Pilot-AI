@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { MessagesSquare, ClipboardCheck, Mic } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { MessagesSquare, ClipboardCheck, Mic, ArrowRight } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 
 const FEATURES = [
@@ -54,6 +55,14 @@ export default function AuthShell({
               </div>
             ))}
           </div>
+
+          <Link
+            to="/how-it-works"
+            className="group mt-10 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 hover:no-underline"
+          >
+            New here? See how it works
+            <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
+          </Link>
         </div>
       </div>
 

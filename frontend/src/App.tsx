@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import OnboardingPage from './pages/OnboardingPage'
+import HowItWorksPage from './pages/HowItWorksPage'
 import LearnModePage from './pages/LearnModePage'
 import TestPage from './pages/TestPage'
 import TestReportPage from './pages/TestReportPage'
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route
           path="/onboarding"
           element={
