@@ -12,6 +12,7 @@ AI_SERVICE_DIR = FAKE_LLM_DIR.parents[1] / "ai-service"
 # the fake in-process, and these values make any client that slips through fail instead.
 os.environ["OPENAI_API_KEY"] = "sk-fake-test-not-a-real-key"
 os.environ["OPENAI_BASE_URL"] = "http://openai.invalid/v1"
+os.environ["OPENAI_MODEL"] = "gpt-4o-mini"
 os.environ["FAKE_LLM_LATENCY_SCALE"] = "0"
 
 sys.path.insert(0, str(FAKE_LLM_DIR))

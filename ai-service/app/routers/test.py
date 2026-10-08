@@ -8,7 +8,7 @@ from app.schemas import (
     EvaluateAnswersRequest, EvaluateAnswersResponse, QuestionEvaluation
 )
 from app.prompts import build_test_generation_messages, build_test_evaluation_messages
-from app.llm import call_llm
+from app.llm import call_llm, extract_json_object
 from app.auth import require_internal_api_key
 from app.scope_validator import validate_topic_scope
 
@@ -31,7 +31,7 @@ async def generate_questions(request: GenerateTestQuestionsRequest, _=Depends(re
         
         # Parse JSON response
         try:
-            data = json.loads(response_text)
+            data = json.loads(extract_json_object(response_text))
             questions_data = data.get("questions", [])
         except json.JSONDecodeError:
             raise HTTPException(status_code=500, detail="Failed to parse AI response")
@@ -87,7 +87,7 @@ async def evaluate_answers(request: EvaluateAnswersRequest, _=Depends(require_in
         
         # Parse JSON response
         try:
-            data = json.loads(response_text)
+            data = json.loads(extract_json_object(response_text))
         except json.JSONDecodeError:
             raise HTTPException(status_code=500, detail="Failed to parse AI evaluation response")
         

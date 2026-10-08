@@ -87,7 +87,8 @@ Spring Web             REST API
 FastAPI 0.111+         Python async web framework
 Python 3.9+            Language version
 Uvicorn 0.29+          ASGI server
-OpenAI SDK 1.30+       LLM integration (GPT-4o by default)
+OpenAI SDK 1.30+       LLM integration (model set by OPENAI_MODEL)
+                       Gemini via its OpenAI-compatible endpoint when LLM_PROVIDER=gemini (GEMINI_MODEL)
 Pydantic 2.7+          Data validation and settings
 ```
 
@@ -324,7 +325,7 @@ Each service requires a `.env` file (gitignored). Copy `.env.example` in each di
 | **Gateway** | `preppilot-backend/gateway/.env` | `JWT_SECRET`, `USER_SERVICE_URL`, `TOPIC_SERVICE_URL`, `AI_SERVICE_URL`, `FRONTEND_ORIGIN` |
 | **User Service** | `preppilot-backend/user-service/.env` | `MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FRONTEND_ORIGIN`, `REFRESH_TOKEN_EXPIRY` |
 | **Topic Service** | `preppilot-backend/topic-service/.env` | `MONGODB_URI`, `JWT_SECRET`, `INTERNAL_API_KEY`, `AI_SERVICE_URL`, `GATEWAY_URL` |
-| **AI Service** | `ai-service/.env` | `LLM_API_KEY`, `LLM_MODEL`, `INTERNAL_API_KEY`, `OPENAI_API_KEY` |
+| **AI Service** | `ai-service/.env` | `LLM_PROVIDER` (`openai` or `gemini`), `OPENAI_API_KEY`, `OPENAI_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `INTERNAL_API_KEY` |
 | **Frontend** | `frontend/.env` | `VITE_API_BASE_URL` |
 | **MongoDB** | Root `.env` | `MONGO_ROOT_USER`, `MONGO_ROOT_PASSWORD` |
 

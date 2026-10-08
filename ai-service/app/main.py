@@ -5,6 +5,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.config import settings
 from app.logging_config import setup_structured_logging
 from app.error_handlers import register_error_handlers
 from app.middleware import UserContextMiddleware
@@ -14,6 +15,7 @@ from app.routers.test import router as test_router
 
 # Setup structured JSON logging
 setup_structured_logging()
+logging.getLogger(__name__).info("LLM provider: %s", settings.llm_provider)
 
 app = FastAPI(title="PrepPilot AI Service", version="0.1.0")
 
