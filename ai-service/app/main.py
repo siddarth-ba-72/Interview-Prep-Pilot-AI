@@ -15,6 +15,7 @@ from app.routers.test import router as test_router
 
 # Setup structured JSON logging
 setup_structured_logging()
+logging.getLogger(__name__).info("LLM provider: %s", settings.llm_provider)
 
 app = FastAPI(title="PrepPilot AI Service", version="0.1.0")
 
@@ -32,5 +33,4 @@ app.include_router(test_router)
 
 @app.get("/health")
 def health():
-    # Shows which provider LLM_PROVIDER selected, to confirm a switch took effect.
-    return JSONResponse(content={"status": "ok", "llmProvider": settings.llm_provider})
+    return JSONResponse(content={"status": "ok"})

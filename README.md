@@ -72,7 +72,7 @@ Simulate real interview conditions with AI evaluation:
   
 - **AI Service** - FastAPI (Python)
   - Stateless AI orchestration
-  - LLM integration (GPT-4o by default)
+  - LLM integration (OpenAI or Gemini, chosen by `LLM_PROVIDER`)
   - Streaming responses via Server-Sent Events (SSE)
   - Dual authentication (internal service key + JWT)
 
@@ -199,7 +199,7 @@ graph LR
 - **Git** for version control
 
 ### Required API Keys & Accounts
-- **OpenAI API Key** - For LLM integration (default: GPT-4o)
+- **OpenAI API Key** (and optionally a **Gemini API Key**) - For LLM integration
 - **Google OAuth Credentials** - For Google sign-in
 - **MongoDB Connection URI** - MongoDB Atlas or local MongoDB
 
@@ -267,16 +267,17 @@ SERVER_PORT=8082
 ### 5. AI Service (`.env`)
 Located in `ai-service/.env`
 ```bash
-# LLM Configuration
-LLM_API_KEY=sk-your-openai-api-key
-LLM_MODEL=gpt-4o
-LLM_MAX_TOKENS=2000
+# Which provider every LLM call uses: openai or gemini
+LLM_PROVIDER=openai
+
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=your-openai-model
+
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=your-gemini-model
 
 # Service-to-service authentication
 INTERNAL_API_KEY=your-internal-api-secret-key
-
-# Server config
-SERVER_PORT=8000
 ```
 
 ### 6. Frontend (`.env`)

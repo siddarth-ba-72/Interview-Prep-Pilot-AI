@@ -24,21 +24,30 @@ def get_client() -> AsyncOpenAI:
     global _client
     if _client is None:
         if settings.llm_provider == "gemini":
-            if not settings.gemini_api_key:
-                # Otherwise the SDK's error asks for OPENAI_API_KEY, which is misleading here.
-                raise RuntimeError("LLM_PROVIDER is gemini but GEMINI_API_KEY is not set")
             _client = AsyncOpenAI(
-                api_key=settings.gemini_api_key,
+                api_key=_required(settings.gemini_api_key, "GEMINI_API_KEY"),
                 base_url=settings.gemini_base_url,
                 timeout=settings.llm_timeout_seconds,
             )
         else:
-            _client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=settings.llm_timeout_seconds)
+            _client = AsyncOpenAI(
+                api_key=_required(settings.openai_api_key, "OPENAI_API_KEY"),
+                timeout=settings.llm_timeout_seconds,
+            )
     return _client
 
 
 def get_model() -> str:
-    return settings.gemini_model if settings.llm_provider == "gemini" else settings.llm_model
+    if settings.llm_provider == "gemini":
+        return _required(settings.gemini_model, "GEMINI_MODEL")
+    return _required(settings.openai_model, "OPENAI_MODEL")
+
+
+def _required(value: str, name: str) -> str:
+    # Name the missing variable; the SDK's own error would ask for OPENAI_API_KEY even on Gemini.
+    if not value:
+        raise RuntimeError(f"LLM_PROVIDER is {settings.llm_provider} but {name} is not set")
+    return value
 
 
 def _strip_markdown_fences(text: str) -> str:

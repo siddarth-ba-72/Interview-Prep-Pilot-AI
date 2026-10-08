@@ -11,11 +11,12 @@ class Settings(BaseSettings):
     # credit is about to run out; takes effect on the next start (or redeploy).
     llm_provider: Literal["openai", "gemini"] = "openai"
 
+    # Model names come only from the environment, so the code doesn't reveal which models are used.
     openai_api_key: str = ""
-    llm_model: str = "gpt-4o"  # the OpenAI model
+    openai_model: str = ""
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-3.8-flash"
+    gemini_model: str = ""
     # Gemini's OpenAI-compatible endpoint, so the same OpenAI SDK calls work for both providers.
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
 

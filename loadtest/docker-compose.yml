@@ -63,7 +63,7 @@ services:
     environment:
       OPENAI_API_KEY: sk-fake-loadtest-not-a-real-key
       OPENAI_BASE_URL: http://fake-llm:8090/v1
-      LLM_MODEL: gpt-4o-mini
+      OPENAI_MODEL: gpt-4o-mini
       INTERNAL_API_KEY: *internal-api-key
     depends_on:
       fake-llm:
