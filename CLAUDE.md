@@ -495,6 +495,14 @@ Topic Service limits AI-backed actions per user (`UsageLimitService`, configured
 - A use whose AI call fails is refunded. Over the limit returns `429 USAGE_LIMIT_REACHED` with `retryAt`; the topic limit returns `403 TOPIC_LIMIT_REACHED`.
 - State lives in the `usage_windows` collection (one document per user and action, TTL-cleaned), updated atomically so concurrent requests cannot both take the last slot. `GET /api/v1/usage` returns what is left.
 
+### Admin Dashboard (Read-Only)
+Pages `/admin` and `/admin/users/:userId`, for users whose role is `ADMIN`. Admins see each user's profile, topic names, and how many tests and mock interviews are active or completed. **Counts only: no scores, answers, reports or chats.** There are no admin write actions.
+
+- **Granting admin (by hand only, no API):** in `users_db`, run `db.users.updateOne({ email: "<email>" }, { $set: { role: "ADMIN" } })`, then sign in again. A missing `role` means `USER`. The role travels as the `role` access-token claim, so revoking it takes effect when the current access token expires (up to 30 minutes).
+- **APIs:** user-service serves `/api/v1/admin/users/**` (paged list with `?q=` search, one user, `/stats`). Topic-service serves `/api/v1/admin/activity/**` (`/summary`, `/users?ids=…` for up to 100 users, `/users/{id}`). The frontend joins the two: it loads a page of users, then asks for their counts.
+- **Access check:** `config/AdminAccessInterceptor.java` in each service reads the role from the verified token, never from a header. It is an MVC interceptor so it matches paths exactly like the controllers. The gateway also turns non-admins away.
+- **Counting rules:** an interview past its deadline counts as completed, since it stays `IN_PROGRESS` in the database until the user returns. Deleting a topic keeps its sessions; they still count in the totals and show as "Deleted topics".
+
 ---
 
 ## Current Implementation Phase

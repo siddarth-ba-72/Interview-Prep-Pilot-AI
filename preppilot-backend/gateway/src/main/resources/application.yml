@@ -32,6 +32,15 @@ spring:
           uri: ${prep-pilot.topic-service-url}
           predicates:
             - Path=/api/v1/topics/**,/api/v1/sessions/**,/api/v1/reports/**,/api/v1/usage/**
+        # Admin dashboard (read-only); each service checks the admin role itself as well
+        - id: admin-user-routes
+          uri: ${prep-pilot.user-service-url}
+          predicates:
+            - Path=/api/v1/admin/users/**
+        - id: admin-activity-routes
+          uri: ${prep-pilot.topic-service-url}
+          predicates:
+            - Path=/api/v1/admin/activity/**
         - id: ai-routes
           uri: ${prep-pilot.ai-service-url}
           predicates:

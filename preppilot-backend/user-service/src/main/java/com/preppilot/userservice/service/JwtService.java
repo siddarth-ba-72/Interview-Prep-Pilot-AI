@@ -30,7 +30,8 @@ public class JwtService {
         Date expiry = new Date(now.getTime() + accessTokenExpiryMs);
         JwtBuilder builder = Jwts.builder()
                 .claim("userId", user.getId())
-                .claim("email", user.getEmail());
+                .claim("email", user.getEmail())
+                .claim("role", user.getRole().name());
         // The gateway forwards this as X-User-Experience; absent until onboarding is done
         if (user.getExperienceLevel() != null) {
             builder.claim("experienceLevel", user.getExperienceLevel().name());

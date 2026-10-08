@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAppSelector } from './hooks'
 import { useSilentRefresh } from './features/auth/useSilentRefresh'
@@ -16,6 +16,10 @@ import MockInterviewPage from './pages/MockInterviewPage'
 import MockInterviewHistoryPage from './pages/MockInterviewHistoryPage'
 import MockInterviewReportPage from './pages/MockInterviewReportPage'
 
+// Separate chunks, so only admins ever download the admin pages
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
+const AdminUserPage = lazy(() => import('./pages/AdminUserPage'))
+
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => {
@@ -27,15 +31,19 @@ function ScrollToTop() {
 function ProtectedRoute({
   children,
   skipOnboardingCheck = false,
+  adminOnly = false,
 }: {
   children: React.ReactNode
   skipOnboardingCheck?: boolean
+  adminOnly?: boolean
 }) {
   const { accessToken, status, user } = useAppSelector((state) => state.auth)
   if (status === 'loading') return null
   if (!accessToken) return <Navigate to="/login" replace />
   // Users who have not answered the questionnaire yet (new sign-ups) answer it before anything else
   if (!skipOnboardingCheck && user && !user.onboardingCompleted) return <Navigate to="/onboarding" replace />
+  // Only hides the pages; the admin APIs check the role in the access token themselves
+  if (adminOnly && user?.role !== 'ADMIN') return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
@@ -119,6 +127,26 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MockInterviewReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute adminOnly>
+              <Suspense fallback={null}>
+                <AdminDashboardPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users/:userId"
+          element={
+            <ProtectedRoute adminOnly>
+              <Suspense fallback={null}>
+                <AdminUserPage />
+              </Suspense>
             </ProtectedRoute>
           }
         />

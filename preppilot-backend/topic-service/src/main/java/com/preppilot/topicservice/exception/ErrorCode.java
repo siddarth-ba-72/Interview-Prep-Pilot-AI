@@ -13,6 +13,9 @@ public enum ErrorCode {
     TOPIC_LIMIT_REACHED(HttpStatus.FORBIDDEN, "Topic limit reached"),
     USAGE_LIMIT_REACHED(HttpStatus.TOO_MANY_REQUESTS, "Usage limit reached"),
 
+    // Admin dashboard (403)
+    ADMIN_ACCESS_REQUIRED(HttpStatus.FORBIDDEN, "Admin access required"),
+
     // Not found (404)
     TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, "Topic not found"),
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "Chat session not found"),

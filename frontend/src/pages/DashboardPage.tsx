@@ -4,7 +4,7 @@ import { useAppSelector, useAppDispatch } from '../hooks'
 import { clearCredentials } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
 import { useNavigate } from 'react-router-dom'
-import { CircleHelp, UserRoundPen } from 'lucide-react'
+import { CircleHelp, ShieldCheck, UserRoundPen } from 'lucide-react'
 import { createTopic, deleteTopic, extractErrorMessage, listTopics } from '../api/topics'
 import { USAGE_QUERY_KEY } from '../api/usage'
 import { useUsage } from '../features/usage/useUsage'
@@ -62,6 +62,17 @@ export default function DashboardPage() {
         onLogout={handleLogout}
         actions={
           <>
+            {user?.role === 'ADMIN' && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                aria-label="Admin"
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+              >
+                <ShieldCheck size={15} />
+                <span className="hidden sm:inline">Admin</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigate('/how-it-works')}

@@ -29,6 +29,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     private static final String EXPERIENCE_HEADER = "X-User-Experience";
 
+    private static final String ADMIN_PREFIX = "/api/v1/admin/";
+
     private final SecretKey signingKey;
 
     public JwtAuthFilter(@Value("${jwt.secret}") String jwtSecret) {
@@ -66,6 +68,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             if (userId == null) {
                 return unauthorized(exchange);
             }
+            // Admin services check the role too; this only stops other users here first
+            if (path.startsWith(ADMIN_PREFIX) && !"ADMIN".equals(claims.get("role", String.class))) {
+                return reject(exchange, HttpStatus.FORBIDDEN);
+            }
             String userEmail = claims.get("email", String.class);
             if (userEmail == null) userEmail = "";
             // Absent for users who have not finished onboarding (or hold a pre-onboarding token)
@@ -90,7 +96,11 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        return reject(exchange, HttpStatus.UNAUTHORIZED);
+    }
+
+    private Mono<Void> reject(ServerWebExchange exchange, HttpStatus status) {
+        exchange.getResponse().setStatusCode(status);
         return exchange.getResponse().setComplete();
     }
 }

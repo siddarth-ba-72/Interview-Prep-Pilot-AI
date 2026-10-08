@@ -3,6 +3,7 @@ package com.preppilot.userservice.config;
 import com.preppilot.userservice.model.User;
 import com.preppilot.userservice.service.AuthService;
 import com.preppilot.userservice.service.AuthService.TokenPair;
+import com.preppilot.userservice.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,13 +20,16 @@ import java.io.IOException;
 public class OAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final AuthService authService;
+    private final UserService userService;
     private final long refreshTokenExpiryDays;
     private final String frontendOrigin;
 
     public OAuthSuccessHandler(AuthService authService,
+                               UserService userService,
                                @Value("${jwt.refresh-token-expiry-days}") long refreshTokenExpiryDays,
                                @Value("${frontend.origin}") String frontendOrigin) {
         this.authService = authService;
+        this.userService = userService;
         this.refreshTokenExpiryDays = refreshTokenExpiryDays;
         this.frontendOrigin = frontendOrigin;
     }
@@ -41,6 +45,8 @@ public class OAuthSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
         if (displayName == null) displayName = email;
 
         User user = authService.findOrCreateGoogleUser(googleId, email, displayName);
+        // The callback page reads the profile from the cached GET /users/me next
+        userService.refreshCachedUser(user);
         TokenPair pair = authService.issueTokens(user);
 
         Cookie cookie = new Cookie("refresh_token", pair.rawRefreshToken());
