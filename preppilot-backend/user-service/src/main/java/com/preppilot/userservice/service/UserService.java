@@ -32,6 +32,13 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /** Replaces the cached copy with one just read from the database at sign-in, so the profile
+     * the frontend fetches next matches the new token (e.g. a role that was set by hand). */
+    @CachePut(value = "users", key = "#user.id")
+    public User refreshCachedUser(User user) {
+        return user;
+    }
+
     private User findUser(String userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));

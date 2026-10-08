@@ -1,6 +1,7 @@
 package com.preppilot.userservice.dto;
 
 import com.preppilot.userservice.model.ExperienceLevel;
+import com.preppilot.userservice.model.Role;
 import com.preppilot.userservice.model.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -42,11 +43,13 @@ public class AuthDtos {
         String displayName,
         String preferredDomain,
         ExperienceLevel experienceLevel,
-        boolean onboardingCompleted
+        boolean onboardingCompleted,
+        Role role
     ) {
         public static UserProfile from(User user) {
             return new UserProfile(user.getId(), user.getEmail(), user.getDisplayName(),
-                    user.getPreferredDomain(), user.getExperienceLevel(), user.isOnboardingCompleted());
+                    user.getPreferredDomain(), user.getExperienceLevel(), user.isOnboardingCompleted(),
+                    user.getRole());
         }
     }
 

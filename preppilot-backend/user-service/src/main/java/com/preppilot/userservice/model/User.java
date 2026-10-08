@@ -31,6 +31,9 @@ public class User {
 
     private ExperienceLevel experienceLevel;
 
+    // Absent on almost every document: users are USER unless an admin was set by hand
+    private Role role;
+
     @CreatedDate
     private Instant createdAt;
 
@@ -57,6 +60,7 @@ public class User {
     public String getPreferredDomain() { return preferredDomain; }
     public ExperienceLevel getExperienceLevel() { return experienceLevel; }
     public boolean isOnboardingCompleted() { return experienceLevel != null; }
+    public Role getRole() { return role != null ? role : Role.USER; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 

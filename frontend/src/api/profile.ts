@@ -3,6 +3,9 @@ import api from './axiosInstance'
 /** The onboarding answer to "current experience". STUDENT tailors Learn, Test and Mock Interview. */
 export type ProfileExperience = 'STUDENT' | 'YEARS_0_3' | 'YEARS_3_5' | 'YEARS_5_8' | 'YEARS_8_13' | 'YEARS_13_PLUS'
 
+/** ADMIN opens the read-only admin dashboard; it is granted by hand in the database. */
+export type Role = 'USER' | 'ADMIN'
+
 export interface User {
   id: string
   email: string
@@ -10,6 +13,7 @@ export interface User {
   preferredDomain: string | null
   experienceLevel: ProfileExperience | null
   onboardingCompleted: boolean
+  role: Role
 }
 
 export interface AuthResponse {
