@@ -504,7 +504,7 @@ Pages `/admin` and `/admin/users/:userId`, for users whose role is `ADMIN`. Admi
 - **Counting rules:** an interview past its deadline counts as completed, since it stays `IN_PROGRESS` in the database until the user returns. Deleting a topic keeps its sessions; they still count in the totals and show as "Deleted topics".
 
 ### User Feedback
-Every signed-in page header has a **Feedback** button that opens a modal with one text box (up to 2000 characters). Users can send any number of messages. Admins read them, newest first, at `/admin/feedback` (linked from the admin dashboard); no one else can.
+Every signed-in page header has a **Feedback** button that opens a modal with one text box (up to 2000 characters). Users can send any number of messages. Admins read them, newest first, in the **Feedback** tab of the admin pages (`/admin/feedback`, next to the Users tab, with a count); no one else can.
 
 - **Storage:** user-service, `users_db.feedback`. Each document keeps the sender's `userId` plus their `email` and `displayName` as they were when it was sent.
 - **APIs:** `POST /api/v1/users/me/feedback` (`{ "message": "..." }`, 201) is under `/api/v1/users/**`, so `JwtAuthFilter` sets the sender from the token. `GET /api/v1/admin/feedback?page=&size=` is admin-only through `AdminAccessInterceptor`; the gateway routes it with the admin user routes.

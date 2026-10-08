@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Inbox, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
+import AdminTabs from '../components/AdminTabs'
 import AppHeader from '../components/AppHeader'
 import PageContainer from '../components/PageContainer'
 import Pager from '../components/Pager'
@@ -50,25 +51,11 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader
-        onBack={() => navigate('/dashboard')}
-        title="Admin"
-        subtitle="Read-only"
-        actions={
-          <button
-            type="button"
-            onClick={() => navigate('/admin/feedback')}
-            aria-label="User feedback"
-            title="User feedback"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-          >
-            <Inbox size={15} />
-            <span className="hidden lg:inline">User feedback</span>
-          </button>
-        }
-      />
+      <AppHeader onBack={() => navigate('/dashboard')} title="Admin" subtitle="Read-only" />
 
       <PageContainer className="flex flex-col gap-7">
+        <AdminTabs />
+
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">Admin dashboard</h1>
           <p className="mt-1 text-sm text-muted">

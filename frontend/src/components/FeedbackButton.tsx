@@ -102,8 +102,7 @@ export default function FeedbackButton() {
                     Send feedback
                   </h2>
                   <p className="mt-1 text-sm text-muted">
-                    What is working, what is broken, what you would like to see. Your name and email are sent
-                    with it.
+                    What is working, what is broken, what you would like to see.
                   </p>
 
                   <textarea
