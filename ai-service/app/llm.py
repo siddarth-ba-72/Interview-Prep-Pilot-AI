@@ -23,8 +23,22 @@ class LlmJsonError(RuntimeError):
 def get_client() -> AsyncOpenAI:
     global _client
     if _client is None:
-        _client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=settings.llm_timeout_seconds)
+        if settings.llm_provider == "gemini":
+            if not settings.gemini_api_key:
+                # Otherwise the SDK's error asks for OPENAI_API_KEY, which is misleading here.
+                raise RuntimeError("LLM_PROVIDER is gemini but GEMINI_API_KEY is not set")
+            _client = AsyncOpenAI(
+                api_key=settings.gemini_api_key,
+                base_url=settings.gemini_base_url,
+                timeout=settings.llm_timeout_seconds,
+            )
+        else:
+            _client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=settings.llm_timeout_seconds)
     return _client
+
+
+def get_model() -> str:
+    return settings.gemini_model if settings.llm_provider == "gemini" else settings.llm_model
 
 
 def _strip_markdown_fences(text: str) -> str:
@@ -59,7 +73,7 @@ async def _create_completion(messages: list[dict], *, json_mode: bool, temperatu
     response_format or temperature rather than failing the whole request."""
     global _supports_json_mode, _supports_temperature
 
-    kwargs: dict = {"model": settings.llm_model, "messages": messages}
+    kwargs: dict = {"model": get_model(), "messages": messages}
     if json_mode and _supports_json_mode:
         kwargs["response_format"] = {"type": "json_object"}
     if temperature is not None and _supports_temperature:
@@ -71,11 +85,11 @@ async def _create_completion(messages: list[dict], *, json_mode: bool, temperatu
     except Exception as exc:
         detail = str(exc).lower()
         if "response_format" in detail and "response_format" in kwargs:
-            logger.warning("Model %s rejected response_format; disabling JSON mode", settings.llm_model)
+            logger.warning("Model %s rejected response_format; disabling JSON mode", get_model())
             _supports_json_mode = False
             return await _create_completion(messages, json_mode=False, temperature=temperature)
         if "temperature" in detail and "temperature" in kwargs:
-            logger.warning("Model %s rejected temperature; falling back to the default", settings.llm_model)
+            logger.warning("Model %s rejected temperature; falling back to the default", get_model())
             _supports_temperature = False
             return await _create_completion(messages, json_mode=json_mode, temperature=None)
         raise
@@ -133,7 +147,7 @@ async def call_llm_json(messages: list[dict], *, attempts: int = 3, temperature:
 async def stream_completion(messages: list[dict]) -> AsyncGenerator[str, None]:
     client = get_client()
     stream = await client.chat.completions.create(
-        model=settings.llm_model,
+        model=get_model(),
         messages=messages,
         stream=True,
     )

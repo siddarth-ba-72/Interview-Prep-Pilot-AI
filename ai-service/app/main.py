@@ -5,6 +5,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.config import settings
 from app.logging_config import setup_structured_logging
 from app.error_handlers import register_error_handlers
 from app.middleware import UserContextMiddleware
@@ -31,4 +32,5 @@ app.include_router(test_router)
 
 @app.get("/health")
 def health():
-    return JSONResponse(content={"status": "ok"})
+    # Shows which provider LLM_PROVIDER selected, to confirm a switch took effect.
+    return JSONResponse(content={"status": "ok", "llmProvider": settings.llm_provider})
