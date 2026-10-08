@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Inbox, Search } from 'lucide-react'
 import AppHeader from '../components/AppHeader'
 import PageContainer from '../components/PageContainer'
+import Pager from '../components/Pager'
 import { SessionCountsText, SessionTile, StatTile } from '../components/AdminStats'
 import { getActivitySummary, getAdminUserStats, getUsersActivity, listAdminUsers } from '../api/admin'
 import type { AdminUser, UserActivity } from '../api/admin'
@@ -46,13 +47,26 @@ export default function AdminDashboardPage() {
 
   const summary = summaryQuery.data
   const usersPage = usersQuery.data
-  const firstShown = usersPage && usersPage.total > 0 ? usersPage.page * usersPage.size + 1 : 0
-  const lastShown = usersPage ? usersPage.page * usersPage.size + usersPage.users.length : 0
-  const hasNextPage = usersPage ? lastShown < usersPage.total : false
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader onBack={() => navigate('/dashboard')} title="Admin" subtitle="Read-only" />
+      <AppHeader
+        onBack={() => navigate('/dashboard')}
+        title="Admin"
+        subtitle="Read-only"
+        actions={
+          <button
+            type="button"
+            onClick={() => navigate('/admin/feedback')}
+            aria-label="User feedback"
+            title="User feedback"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
+          >
+            <Inbox size={15} />
+            <span className="hidden lg:inline">User feedback</span>
+          </button>
+        }
+      />
 
       <PageContainer className="flex flex-col gap-7">
         <div>
@@ -113,19 +127,13 @@ export default function AdminDashboardPage() {
                 onOpen={(id) => navigate(`/admin/users/${id}`)}
               />
 
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-muted tabular-nums">
-                  {firstShown}–{lastShown} of {usersPage.total}
-                </p>
-                <div className="flex gap-2">
-                  <PageButton label="Previous" disabled={page === 0} onClick={() => setPage(page - 1)}>
-                    <ChevronLeft size={16} />
-                  </PageButton>
-                  <PageButton label="Next" disabled={!hasNextPage} onClick={() => setPage(page + 1)}>
-                    <ChevronRight size={16} />
-                  </PageButton>
-                </div>
-              </div>
+              <Pager
+                page={usersPage.page}
+                size={usersPage.size}
+                shown={usersPage.users.length}
+                total={usersPage.total}
+                onPage={setPage}
+              />
             </>
           )}
         </section>
@@ -244,29 +252,5 @@ function UserName({ user }: { user: AdminUser }) {
       </div>
       <div className="truncate text-xs text-muted">{user.email}</div>
     </div>
-  )
-}
-
-function PageButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string
-  disabled: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-fg transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
   )
 }

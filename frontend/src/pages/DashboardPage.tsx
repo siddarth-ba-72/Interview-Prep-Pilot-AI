@@ -67,29 +67,32 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => navigate('/admin')}
                 aria-label="Admin"
+                title="Admin"
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
               >
                 <ShieldCheck size={15} />
-                <span className="hidden sm:inline">Admin</span>
+                <span className="hidden lg:inline">Admin</span>
               </button>
             )}
             <button
               type="button"
               onClick={() => navigate('/how-it-works')}
               aria-label="How it works"
+              title="How it works"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
             >
               <CircleHelp size={15} />
-              <span className="hidden sm:inline">How it works</span>
+              <span className="hidden lg:inline">How it works</span>
             </button>
             <button
               type="button"
               onClick={() => navigate('/onboarding')}
               aria-label="Profile"
+              title="Profile"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
             >
               <UserRoundPen size={15} />
-              <span className="hidden sm:inline">Profile</span>
+              <span className="hidden lg:inline">Profile</span>
             </button>
           </>
         }

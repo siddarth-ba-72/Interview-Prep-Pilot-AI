@@ -19,6 +19,7 @@ import MockInterviewReportPage from './pages/MockInterviewReportPage'
 // Separate chunks, so only admins ever download the admin pages
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
 const AdminUserPage = lazy(() => import('./pages/AdminUserPage'))
+const AdminFeedbackPage = lazy(() => import('./pages/AdminFeedbackPage'))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -146,6 +147,16 @@ export default function App() {
             <ProtectedRoute adminOnly>
               <Suspense fallback={null}>
                 <AdminUserPage />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/feedback"
+          element={
+            <ProtectedRoute adminOnly>
+              <Suspense fallback={null}>
+                <AdminFeedbackPage />
               </Suspense>
             </ProtectedRoute>
           }
