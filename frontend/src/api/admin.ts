@@ -57,6 +57,24 @@ export interface UserActivityDetail {
   interviews: SessionCounts
 }
 
+/** Name and email are as they were when the message was sent. */
+export interface AdminFeedback {
+  id: string
+  userId: string
+  email: string
+  displayName: string | null
+  message: string
+  createdAt: string | null
+}
+
+export interface AdminFeedbackList {
+  feedback: AdminFeedback[]
+  page: number
+  size: number
+  /** All feedback, across all pages. */
+  total: number
+}
+
 export async function listAdminUsers(params: { q: string; page: number; size: number }): Promise<AdminUserPage> {
   const { data } = await api.get<AdminUserPage>('/admin/users', {
     params: { q: params.q || undefined, page: params.page, size: params.size },
@@ -86,5 +104,10 @@ export async function getUsersActivity(userIds: string[]): Promise<UserActivity[
 
 export async function getUserActivity(userId: string): Promise<UserActivityDetail> {
   const { data } = await api.get<UserActivityDetail>(`/admin/activity/users/${encodeURIComponent(userId)}`)
+  return data
+}
+
+export async function listAdminFeedback(params: { page: number; size: number }): Promise<AdminFeedbackList> {
+  const { data } = await api.get<AdminFeedbackList>('/admin/feedback', { params })
   return data
 }

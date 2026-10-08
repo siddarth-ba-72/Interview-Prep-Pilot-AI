@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, LogOut } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+import FeedbackButton from './FeedbackButton'
+import { useAppSelector } from '../hooks'
 
 type AppHeaderProps = {
   onBack?: () => void
@@ -14,11 +16,14 @@ type AppHeaderProps = {
 
 export default function AppHeader({ onBack, title, subtitle, actions, userName, onLogout }: AppHeaderProps) {
   const navigate = useNavigate()
+  // The header also shows on the public How it works page
+  const signedIn = useAppSelector((state) => Boolean(state.auth.accessToken && state.auth.user))
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-surface/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-[1400px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <div className="flex min-w-0 items-center gap-3">
+        {/* A size container: on narrow screens with many buttons the wordmark hides and the logo stays */}
+        <div className="@container flex min-w-0 flex-1 items-center gap-3">
           {onBack ? (
             <button
               type="button"
@@ -37,7 +42,7 @@ export default function AppHeader({ onBack, title, subtitle, actions, userName, 
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-sm font-black text-white">
                 P
               </span>
-              <span className="text-base font-extrabold tracking-tight text-fg">PrepPilot</span>
+              <span className="text-base font-extrabold tracking-tight text-fg @max-[7.5rem]:hidden">PrepPilot</span>
             </button>
           )}
 
@@ -53,6 +58,7 @@ export default function AppHeader({ onBack, title, subtitle, actions, userName, 
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           {actions}
+          {signedIn && <FeedbackButton />}
           <ThemeToggle />
           {userName && (
             <span className="hidden text-sm font-semibold text-muted md:inline">{userName}</span>
@@ -61,10 +67,12 @@ export default function AppHeader({ onBack, title, subtitle, actions, userName, 
             <button
               type="button"
               onClick={onLogout}
+              aria-label="Sign out"
+              title="Sign out"
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
             >
               <LogOut size={15} />
-              <span className="hidden sm:inline">Sign out</span>
+              <span className="hidden lg:inline">Sign out</span>
             </button>
           )}
         </div>

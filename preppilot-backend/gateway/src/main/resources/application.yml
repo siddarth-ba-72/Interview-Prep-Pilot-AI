@@ -36,7 +36,7 @@ spring:
         - id: admin-user-routes
           uri: ${prep-pilot.user-service-url}
           predicates:
-            - Path=/api/v1/admin/users/**
+            - Path=/api/v1/admin/users/**,/api/v1/admin/feedback/**
         - id: admin-activity-routes
           uri: ${prep-pilot.topic-service-url}
           predicates:
