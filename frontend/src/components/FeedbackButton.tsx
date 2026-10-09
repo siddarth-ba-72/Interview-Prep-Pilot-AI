@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { CircleCheck, MessageSquareText } from 'lucide-react'
 import { FEEDBACK_MAX_LENGTH, submitFeedback } from '../api/feedback'
 import { extractErrorMessage } from '../api/topics'
+import { trackEvent } from '../features/analytics/clarity'
 
 /** Header button that opens a modal for sending feedback. Users can send as many as they like. */
 export default function FeedbackButton() {
@@ -17,6 +18,7 @@ export default function FeedbackButton() {
     onSuccess: () => {
       setMessage('')
       setSent(true)
+      trackEvent('feedback_sent')
     },
   })
 
@@ -93,6 +95,7 @@ export default function FeedbackButton() {
                 </div>
               ) : (
                 <form
+                  data-clarity-mask="True"
                   onSubmit={(event) => {
                     event.preventDefault()
                     if (canSend) mutation.mutate(trimmed)

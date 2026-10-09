@@ -134,7 +134,7 @@ export default function MockInterviewHistoryPage() {
         }
       />
 
-      <PageContainer maxWidth="max-w-4xl">
+      <PageContainer mask maxWidth="max-w-4xl">
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-14 text-center">
             <p className="text-sm font-medium text-muted">No mock interviews yet for this topic.</p>

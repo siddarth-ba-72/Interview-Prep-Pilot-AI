@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from '../hooks'
 import * as testAPI from '../api/tests'
 import * as topicAPI from '../api/topics'
 import { USAGE_QUERY_KEY } from '../api/usage'
+import { trackEvent } from '../features/analytics/clarity'
 import type { RootState } from '../store'
 import {
   setTestGenerating,
@@ -61,6 +62,7 @@ export default function TestPage() {
             basedOnPreviousAttempt: response.basedOnPreviousAttempt,
           })
         )
+        trackEvent('test_started')
       } catch (err) {
         setError(topicAPI.extractErrorMessage(err, (err as Error).message || 'Failed to load test'))
       } finally {
@@ -101,6 +103,7 @@ export default function TestPage() {
       })
 
       dispatch(setTestCompleted({ topicId, report }))
+      trackEvent('test_submitted')
       dispatch(openResultsModal({ sessionId: testState.sessionId! }))
     } catch (err) {
       setError((err as Error).message || 'Failed to submit test')
@@ -157,7 +160,7 @@ export default function TestPage() {
     <div className="min-h-screen bg-bg">
       <AppHeader onBack={() => navigate('/dashboard')} title={topic.name} subtitle="Test Mode" />
 
-      <PageContainer maxWidth="max-w-3xl" className="flex flex-col gap-8">
+      <PageContainer mask maxWidth="max-w-3xl" className="flex flex-col gap-8">
         <div>
           <div className="mb-2 flex items-center gap-2">
             <span className="rounded-full bg-primary-subtle px-3 py-1 text-xs font-bold text-primary">

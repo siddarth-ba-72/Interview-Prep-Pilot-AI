@@ -326,7 +326,7 @@ Each service requires a `.env` file (gitignored). Copy `.env.example` in each di
 | **User Service** | `preppilot-backend/user-service/.env` | `MONGODB_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FRONTEND_ORIGIN`, `REFRESH_TOKEN_EXPIRY` |
 | **Topic Service** | `preppilot-backend/topic-service/.env` | `MONGODB_URI`, `JWT_SECRET`, `INTERNAL_API_KEY`, `AI_SERVICE_URL`, `GATEWAY_URL` |
 | **AI Service** | `ai-service/.env` | `LLM_PROVIDER` (`openai` or `gemini`), `OPENAI_API_KEY`, `OPENAI_MODEL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `INTERNAL_API_KEY` |
-| **Frontend** | `frontend/.env` | `VITE_API_BASE_URL` |
+| **Frontend** | `frontend/.env` | `VITE_API_BASE_URL`, `VITE_CLARITY_PROJECT_ID` (production only) |
 | **MongoDB** | Root `.env` | `MONGO_ROOT_USER`, `MONGO_ROOT_PASSWORD` |
 
 ### Critical Invariants
@@ -508,6 +508,13 @@ Every signed-in page header has a **Feedback** button that opens a modal with on
 
 - **Storage:** user-service, `users_db.feedback`. Each document keeps the sender's `userId` plus their `email` and `displayName` as they were when it was sent.
 - **APIs:** `POST /api/v1/users/me/feedback` (`{ "message": "..." }`, 201) is under `/api/v1/users/**`, so `JwtAuthFilter` sets the sender from the token. `GET /api/v1/admin/feedback?page=&size=` is admin-only through `AdminAccessInterceptor`; the gateway routes it with the admin user routes.
+
+### Analytics (Microsoft Clarity)
+The frontend records sessions and heatmaps with Microsoft Clarity (`src/features/analytics/clarity.ts`). It runs only when `VITE_CLARITY_PROJECT_ID` is set at build time, so set it on Vercel only; local, load-test and e2e runs stay unrecorded.
+
+- **Identity:** Clarity gets the user id plus `experience` and `role` tags, never the name or email.
+- **Masking:** answers, scores, reports, chats and admin data must not reach Clarity. Pages that show them use `<PageContainer mask>`; smaller elements (chat bubbles, results modal, the header name, a topic's average score, the feedback form) carry `data-clarity-mask="True"`. A new page or component that shows such data needs one of the two.
+- **Events:** `topic_created`, `learn_message_sent`, `test_started`, `test_submitted`, `interview_started`, `interview_completed`, `feedback_sent`, and `usage_limit_reached` / `topic_limit_reached` from the API error codes. Use `trackEvent`, which does nothing when Clarity is off.
 
 ---
 

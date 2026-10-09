@@ -61,7 +61,9 @@ export default function AppHeader({ onBack, title, subtitle, actions, userName, 
           {signedIn && <FeedbackButton />}
           <ThemeToggle />
           {userName && (
-            <span className="hidden text-sm font-semibold text-muted md:inline">{userName}</span>
+            <span className="hidden text-sm font-semibold text-muted md:inline" data-clarity-mask="True">
+              {userName}
+            </span>
           )}
           {onLogout && (
             <button

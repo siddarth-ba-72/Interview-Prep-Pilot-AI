@@ -1,5 +1,6 @@
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
+  readonly VITE_CLARITY_PROJECT_ID?: string
 }
 
 interface ImportMeta {
@@ -23,4 +24,9 @@ export function getBackendUrl(path: string): string {
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${configuredBaseUrl}${normalizedPath}`
+}
+
+/** Microsoft Clarity project; unset everywhere except production, so dev and test runs are not recorded */
+export function getClarityProjectId(): string | undefined {
+  return (import.meta as unknown as ImportMeta).env.VITE_CLARITY_PROJECT_ID?.trim() || undefined
 }

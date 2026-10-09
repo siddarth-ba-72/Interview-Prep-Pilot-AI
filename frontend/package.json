@@ -10,6 +10,7 @@
     "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {
+    "@microsoft/clarity": "^1.0.2",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@reduxjs/toolkit": "^2.2.5",
     "@tailwindcss/typography": "^0.5.20",

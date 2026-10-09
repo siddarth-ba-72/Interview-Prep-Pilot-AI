@@ -3,6 +3,7 @@ import { store } from '../store'
 import { setCredentials, clearCredentials } from '../features/auth/authSlice'
 import { getApiBaseUrl } from './config'
 import { refreshSession } from './refreshSession'
+import { trackLimitError } from '../features/analytics/clarity'
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
@@ -43,6 +44,7 @@ api.interceptors.response.use(
       }
     }
 
+    trackLimitError(error.response?.data?.error?.code)
     return Promise.reject(error)
   }
 )

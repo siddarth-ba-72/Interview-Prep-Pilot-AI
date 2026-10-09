@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAppSelector } from './hooks'
 import { useSilentRefresh } from './features/auth/useSilentRefresh'
+import { ClarityIdentify } from './features/analytics/clarity'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
@@ -54,6 +55,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <ClarityIdentify />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

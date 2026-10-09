@@ -108,7 +108,7 @@ export default function TestReportPage() {
     <div className="min-h-screen bg-bg">
       <AppHeader onBack={() => navigate(`/topics/${topicId}/tests`)} title="Test Report" />
 
-      <PageContainer maxWidth="max-w-4xl" className="flex flex-col gap-8">
+      <PageContainer mask maxWidth="max-w-4xl" className="flex flex-col gap-8">
         <section>
           <div className="mb-3 flex items-center gap-2">
             <h2 className="text-lg font-bold text-fg">Score Summary</h2>
