@@ -153,7 +153,7 @@ export default function MockInterviewReportPage() {
           </button>
         }
       />
-      <PageContainer maxWidth="max-w-3xl">
+      <PageContainer mask maxWidth="max-w-3xl">
         <div className="flex flex-col gap-4">
           {/* Score summary */}
           <div className="flex flex-col items-center gap-5 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:flex-row sm:items-center">

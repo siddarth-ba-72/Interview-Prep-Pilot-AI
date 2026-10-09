@@ -35,6 +35,7 @@ export default function ResultsModal() {
     >
       <div
         className="animate-modal-pop w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-2xl"
+        data-clarity-mask="True"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-extrabold text-fg">Test Results</h2>

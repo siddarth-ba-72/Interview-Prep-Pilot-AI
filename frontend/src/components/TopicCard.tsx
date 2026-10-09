@@ -56,7 +56,10 @@ export default function TopicCard({ topic, onDelete, isDeleting }: TopicCardProp
       </p>
 
       {topic.avgScore !== null && topic.avgScore !== undefined && (
-        <div className="mb-4 inline-flex w-fit items-center rounded-full border border-primary/20 bg-primary-subtle px-3 py-1 text-xs font-semibold text-primary">
+        <div
+          className="mb-4 inline-flex w-fit items-center rounded-full border border-primary/20 bg-primary-subtle px-3 py-1 text-xs font-semibold text-primary"
+          data-clarity-mask="True"
+        >
           Avg: {topic.avgScore.toFixed(1)}/60 ({topic.testCount} tests)
         </div>
       )}

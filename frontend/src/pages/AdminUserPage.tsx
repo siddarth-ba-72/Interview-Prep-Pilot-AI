@@ -26,7 +26,7 @@ export default function AdminUserPage() {
         subtitle="Admin · Read-only"
       />
 
-      <PageContainer maxWidth="max-w-5xl" className="flex flex-col gap-7">
+      <PageContainer mask maxWidth="max-w-5xl" className="flex flex-col gap-7">
         {userQuery.isLoading && <p className="text-sm text-muted">Loading user…</p>}
         {userQuery.isError && (
           <p className="text-sm font-medium text-danger">{notFound ? 'User not found.' : 'Could not load this user.'}</p>

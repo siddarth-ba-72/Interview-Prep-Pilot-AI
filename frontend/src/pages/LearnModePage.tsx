@@ -7,6 +7,7 @@ import { extractErrorMessage, listTopics } from '../api/topics'
 import { streamChatMessage } from '../api/chatStream'
 import { USAGE_QUERY_KEY, formatAvailableAt, isLocked } from '../api/usage'
 import { useUsage } from '../features/usage/useUsage'
+import { trackEvent } from '../features/analytics/clarity'
 import {
   olderMessagesLoadFailed,
   olderMessagesLoaded,
@@ -59,7 +60,10 @@ export default function LearnModePage() {
     await streamChatMessage(topicId, content, {
       onEvent: (event) => {
         if (event.type === 'token') dispatch(tokenReceived({ topicId, token: event.token }))
-        else if (event.type === 'done') dispatch(streamCompleted({ topicId }))
+        else if (event.type === 'done') {
+          dispatch(streamCompleted({ topicId }))
+          trackEvent('learn_message_sent')
+        }
         else if (event.type === 'error') dispatch(streamErrored({ topicId, message: event.message }))
       },
       onFatalError: (message) => dispatch(streamErrored({ topicId, message })),

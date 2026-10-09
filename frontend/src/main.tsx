@@ -6,7 +6,10 @@ import App from './App'
 import Footer from './components/Footer'
 import { store } from './store'
 import { ThemeProvider } from './features/theme/ThemeProvider'
+import { initClarity } from './features/analytics/clarity'
 import './index.css'
+
+initClarity()
 
 const queryClient = new QueryClient()
 

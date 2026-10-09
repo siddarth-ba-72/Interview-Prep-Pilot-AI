@@ -21,6 +21,7 @@ import * as interviewAPI from '../api/interviews'
 import type { Difficulty, ExperienceLevel, InterviewConfig } from '../api/interviews'
 import { USAGE_QUERY_KEY, formatAvailableAt, isLocked } from '../api/usage'
 import { useUsage } from '../features/usage/useUsage'
+import { trackEvent } from '../features/analytics/clarity'
 import {
   advanceToNextQuestion,
   interviewEnding,
@@ -164,6 +165,7 @@ export default function MockInterviewPage() {
       dispatch(interviewEnding({ topicId }))
       try {
         const report = await interviewAPI.endInterview(topicId, id)
+        trackEvent('interview_completed')
         goToReport(report, id)
       } catch (err) {
         setError(interviewAPI.interviewErrorMessage(err, 'Failed to generate the interview report'))
@@ -231,6 +233,7 @@ export default function MockInterviewPage() {
       const response = await interviewAPI.startInterview(topicId, config)
       expiryHandledRef.current = false
       dispatch(interviewSessionLoaded({ topicId, session: response }))
+      trackEvent('interview_started')
     } catch (err) {
       setError(interviewAPI.interviewErrorMessage(err, 'Failed to start the interview'))
       dispatch(interviewReset({ topicId }))
@@ -555,7 +558,7 @@ export default function MockInterviewPage() {
         </div>
       </div>
 
-      <PageContainer maxWidth="max-w-3xl">
+      <PageContainer mask maxWidth="max-w-3xl">
         <div className="flex flex-col gap-4">
           {error && (
             <div className="rounded-xl border border-danger/30 bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-fg">

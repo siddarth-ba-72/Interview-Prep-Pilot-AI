@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-bg">
       <AppHeader onBack={() => navigate('/dashboard')} title="Admin" subtitle="Read-only" />
 
-      <PageContainer className="flex flex-col gap-7">
+      <PageContainer mask className="flex flex-col gap-7">
         <AdminTabs />
 
         <div>

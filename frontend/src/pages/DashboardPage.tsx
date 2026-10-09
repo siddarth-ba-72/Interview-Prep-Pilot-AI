@@ -8,6 +8,7 @@ import { CircleHelp, ShieldCheck, UserRoundPen } from 'lucide-react'
 import { createTopic, deleteTopic, extractErrorMessage, listTopics } from '../api/topics'
 import { USAGE_QUERY_KEY } from '../api/usage'
 import { useUsage } from '../features/usage/useUsage'
+import { trackEvent } from '../features/analytics/clarity'
 import NewTopicForm from '../components/NewTopicForm'
 import UsageSummary from '../components/UsageSummary'
 import TopicList from '../components/TopicList'
@@ -29,6 +30,7 @@ export default function DashboardPage() {
     mutationFn: createTopic,
     onSuccess: () => {
       setCreateError(null)
+      trackEvent('topic_created')
       queryClient.invalidateQueries({ queryKey: ['topics'] })
       queryClient.invalidateQueries({ queryKey: USAGE_QUERY_KEY })
     },

@@ -4,6 +4,7 @@ import { setCredentials, clearCredentials } from '../features/auth/authSlice'
 import { getApiBaseUrl } from './config'
 import { refreshSession } from './refreshSession'
 import { withRetryTime } from './usage'
+import { trackLimitError } from '../features/analytics/clarity'
 
 export type StreamEvent = { type: 'token'; token: string } | { type: 'error'; message: string } | { type: 'done' }
 
@@ -57,6 +58,7 @@ export async function streamChatMessage(topicId: string, content: string, handle
           try {
             const parsed = JSON.parse(ev.data)
             if (parsed.error) {
+              trackLimitError(parsed.code)
               handlers.onEvent({ type: 'error', message: withRetryTime(parsed.error, parsed.retryAt) })
             } else if (parsed.token) {
               handlers.onEvent({ type: 'token', token: parsed.token })
