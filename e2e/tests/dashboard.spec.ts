@@ -4,7 +4,6 @@ import { createTopic, topicCard, uniqueTopic } from '../support/app'
 test('the dashboard shows the prep track', async ({ signedInPage: page }) => {
   const track = page.getByRole('region', { name: 'Your prep track' })
   await expect(track).toBeVisible()
-  await expect(track.getByText('Unlimited practice')).toBeVisible()
 })
 
 test('a topic can be created and deleted', async ({ signedInPage: page }) => {

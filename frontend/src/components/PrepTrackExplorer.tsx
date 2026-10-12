@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Infinity as InfinityIcon, UserRoundPen } from 'lucide-react'
+import { UserRoundPen } from 'lucide-react'
 import { TRACKS, type TrackKey } from '../features/prepTrack/tracks'
 
 interface PrepTrackExplorerProps {
@@ -41,12 +41,8 @@ export default function PrepTrackExplorer({ current, profileChips = [], onEditPr
             <TrackIcon size={20} />
           </span>
           <div className="min-w-0">
-            <h2 className="flex flex-wrap items-center gap-2 text-base font-bold text-fg">
+            <h2 className="text-base font-bold text-fg">
               {!current ? 'Two tracks, one app' : previewingOther ? `${track.label} track` : 'Your prep track'}
-              <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success-subtle px-2 py-0.5 text-[11px] font-bold text-success-fg">
-                <InfinityIcon size={13} strokeWidth={2.5} aria-hidden />
-                Unlimited practice
-              </span>
             </h2>
             <p className="mt-0.5 text-xs text-muted">{track.audience}</p>
             {profileChips.length > 0 && !previewingOther && (
