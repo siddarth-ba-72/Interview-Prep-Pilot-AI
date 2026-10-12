@@ -7,7 +7,6 @@ import com.preppilot.topicservice.exception.TopicNotFoundException;
 import com.preppilot.topicservice.model.MockInterviewReport;
 import com.preppilot.topicservice.model.MockInterviewSession;
 import com.preppilot.topicservice.model.Topic;
-import com.preppilot.topicservice.model.UsageAction;
 import com.preppilot.topicservice.repository.MockInterviewReportRepository;
 import com.preppilot.topicservice.repository.MockInterviewSessionRepository;
 import com.preppilot.topicservice.repository.TopicRepository;
@@ -65,18 +64,15 @@ public class MockInterviewService {
     private final MockInterviewReportRepository reportRepository;
     private final TopicRepository topicRepository;
     private final AiClient aiClient;
-    private final UsageLimitService usageLimitService;
 
     public MockInterviewService(MockInterviewSessionRepository sessionRepository,
                                 MockInterviewReportRepository reportRepository,
                                 TopicRepository topicRepository,
-                                AiClient aiClient,
-                                UsageLimitService usageLimitService) {
+                                AiClient aiClient) {
         this.sessionRepository = sessionRepository;
         this.reportRepository = reportRepository;
         this.topicRepository = topicRepository;
         this.aiClient = aiClient;
-        this.usageLimitService = usageLimitService;
     }
 
     // ------------------------------------------------------------------ start / resume
@@ -114,10 +110,6 @@ public class MockInterviewService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "INVALID_INTERVIEW_CONFIG",
                     "durationMinutes must be one of 30, 45, or 60");
         }
-
-        // A new interview costs one use; resuming, answering and ending it are free. No refund
-        // path: planning and the opening question fall back to defaults when the AI fails.
-        usageLimitService.consume(userId, profileExperienceLevel, UsageAction.MOCK_INTERVIEW);
 
         MockInterviewSession session = new MockInterviewSession(internalTopicId, userId);
         session.setExperienceLevel(experienceLevel);

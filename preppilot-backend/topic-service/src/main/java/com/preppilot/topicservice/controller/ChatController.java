@@ -5,7 +5,6 @@ import com.preppilot.topicservice.dto.ChatDtos.ChatSessionResponse;
 import com.preppilot.topicservice.dto.ChatDtos.PagedMessagesResponse;
 import com.preppilot.topicservice.dto.ChatDtos.SendMessageRequest;
 import com.preppilot.topicservice.exception.ApiException;
-import com.preppilot.topicservice.exception.UsageLimitExceededException;
 import com.preppilot.topicservice.service.ChatSessionService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
@@ -63,9 +62,6 @@ public class ChatController {
         Map<String, Object> event = new HashMap<>();
         event.put("error", ex.getMessage());
         event.put("code", ex.getCode());
-        if (ex instanceof UsageLimitExceededException limit && limit.getRetryAt() != null) {
-            event.put("retryAt", limit.getRetryAt().toString());
-        }
         try {
             String data = objectMapper.writeValueAsString(event);
             emitter.send(SseEmitter.event().data(data, MediaType.APPLICATION_JSON));

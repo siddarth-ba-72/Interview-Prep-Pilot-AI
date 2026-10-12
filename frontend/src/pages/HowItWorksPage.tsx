@@ -12,20 +12,19 @@ import {
 } from 'lucide-react'
 import { useAppSelector } from '../hooks'
 import AppHeader from '../components/AppHeader'
+import PrepTrackExplorer from '../components/PrepTrackExplorer'
 import Hero from '../components/howItWorks/Hero'
-import LimitsExplorer from '../components/howItWorks/LimitsExplorer'
 import Lightbox from '../components/howItWorks/Lightbox'
 import Reveal from '../components/howItWorks/Reveal'
 import StepNav, { type NavItem } from '../components/howItWorks/StepNav'
 import StepSection from '../components/howItWorks/StepSection'
 import { InterviewRatings, LearnPrompts, TestScoring } from '../components/howItWorks/StepExtras'
-import { FAQS, LIMITS_STEP, STEPS, type Scene } from '../features/howItWorks/content'
+import { FAQS, STEPS, type Scene } from '../features/howItWorks/content'
+import { trackFor } from '../features/prepTrack/tracks'
 import { useActiveSection, useInView, usePrefersReducedMotion, useScrollProgress } from '../features/howItWorks/hooks'
 
-const GUIDE = [...STEPS, LIMITS_STEP]
-
 const NAV_ITEMS: NavItem[] = [
-  ...GUIDE.map((step) => ({ id: step.id, label: step.nav, icon: step.icon })),
+  ...STEPS.map((step) => ({ id: step.id, label: step.nav, icon: step.icon })),
   { id: 'faq', label: 'FAQ', icon: CircleHelp },
 ]
 
@@ -37,10 +36,10 @@ const STEP_EXTRAS: Record<string, JSX.Element> = {
 
 /**
  * A public, static walkthrough of PrepPilot for new users: every step from sign-up to mock interviews,
- * with real screenshots (light and dark) and the daily limits. It makes no API calls.
+ * with real screenshots (light and dark) and how the experience answer shapes each mode. It makes no API calls.
  */
 export default function HowItWorksPage() {
-  const { accessToken, status } = useAppSelector((state) => state.auth)
+  const { accessToken, status, user } = useAppSelector((state) => state.auth)
   const signedIn = Boolean(accessToken)
   const navigate = useNavigate()
   const guideRef = useRef<HTMLDivElement>(null)
@@ -86,7 +85,7 @@ export default function HowItWorksPage() {
     <div className="min-h-screen bg-bg">
       <AppHeader title="How it works" actions={headerActions} />
 
-      <Hero steps={GUIDE} signedIn={signedIn} />
+      <Hero steps={STEPS} signedIn={signedIn} />
 
       <div ref={guideRef} className="relative">
         <StepNav items={NAV_ITEMS} active={active} progress={progress} />
@@ -99,20 +98,17 @@ export default function HowItWorksPage() {
               number={i + 1}
               reverse={i % 2 === 1}
               onOpen={openLightbox}
-              extra={STEP_EXTRAS[step.id]}
+              extra={
+                step.id === 'get-started' ? (
+                  <PrepTrackExplorer current={user?.experienceLevel ? trackFor(user.experienceLevel) : undefined} />
+                ) : (
+                  STEP_EXTRAS[step.id]
+                )
+              }
             />
           ))}
 
           <StudyLoop />
-
-          <StepSection
-            step={LIMITS_STEP}
-            number={GUIDE.length}
-            reverse
-            onOpen={openLightbox}
-            extra={<LimitsExplorer />}
-            extraFirst
-          />
 
           <Faq />
         </div>

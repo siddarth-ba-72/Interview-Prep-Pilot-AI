@@ -31,8 +31,8 @@ export default function Hero({ steps, signedIn }: { steps: Step[]; signedIn: boo
             </span>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-            PrepPilot is your AI interview coach. This guide walks you through every feature, step by step, with real
-            screenshots from the app.
+            PrepPilot is your free AI interview coach, with no daily limits. This guide walks you through every
+            feature, step by step, with real screenshots from the app.
           </p>
           <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-fg">
             Works for any topic, like <RotatingWord words={TOPIC_EXAMPLES} />
@@ -137,7 +137,7 @@ function HeroShowcase() {
 function Journey({ steps }: { steps: Step[] }) {
   return (
     <div className="relative mx-auto w-full max-w-6xl px-4 pb-14 sm:px-6 lg:px-8">
-      <ol className="relative grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <ol className="relative grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <span
           aria-hidden
           className="animate-flow absolute left-[8%] right-[8%] top-[2.1rem] hidden h-0.5 rounded-full bg-gradient-to-r from-primary/20 via-accent to-primary/20 lg:block"

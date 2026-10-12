@@ -1,9 +1,9 @@
 import { test, expect } from '../support/fixtures'
 import { createTopic, topicCard, uniqueTopic } from '../support/app'
 
-test('the dashboard shows usage limits', async ({ signedInPage: page }) => {
-  const usage = page.getByRole('region', { name: 'Usage limits' })
-  await expect(usage).toBeVisible()
+test('the dashboard shows the prep track', async ({ signedInPage: page }) => {
+  const track = page.getByRole('region', { name: 'Your prep track' })
+  await expect(track).toBeVisible()
 })
 
 test('a topic can be created and deleted', async ({ signedInPage: page }) => {
