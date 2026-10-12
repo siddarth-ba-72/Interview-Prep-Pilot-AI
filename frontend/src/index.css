@@ -218,11 +218,60 @@
     animation: caret 1s step-end infinite;
   }
 
+  /* Dashboard */
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes wave {
+    0%,
+    60%,
+    100% {
+      transform: rotate(0deg);
+    }
+    10%,
+    30% {
+      transform: rotate(14deg);
+    }
+    20%,
+    40% {
+      transform: rotate(-8deg);
+    }
+  }
+
+  .animate-rise-in {
+    animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .animate-wave {
+    display: inline-block;
+    transform-origin: 70% 70%;
+    animation: wave 2.4s ease-in-out 0.4s 2;
+  }
+
+  /* A soft glow that follows the pointer; the element sets --spot-x / --spot-y on mouse move */
+  .spotlight {
+    background-image: radial-gradient(
+      320px circle at var(--spot-x, 50%) var(--spot-y, -40%),
+      color-mix(in srgb, var(--primary) 12%, transparent),
+      transparent 70%
+    );
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-float,
     .animate-flow,
     .animate-word-in,
-    .animate-pop-in {
+    .animate-pop-in,
+    .animate-rise-in,
+    .animate-wave {
       animation: none;
     }
   }
