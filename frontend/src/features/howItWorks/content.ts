@@ -1,10 +1,9 @@
 import type { LucideIcon } from 'lucide-react'
-import { ClipboardCheck, Gauge, LayoutDashboard, MessagesSquare, Mic, UserPlus } from 'lucide-react'
+import { ClipboardCheck, LayoutDashboard, MessagesSquare, Mic, UserPlus } from 'lucide-react'
 
 /**
  * Everything the "How it works" page says. The screenshots live in public/how-it-works/{light,dark}/
  * and are re-taken with `node e2e/demo/capture-how-it-works.mjs` (see that script for how to run it).
- * Limit numbers mirror `usage-limits` in topic-service's application.yml; keep them in step.
  */
 
 export type ShotName =
@@ -32,8 +31,6 @@ export type ShotName =
   | 'interview-model-answers'
   | 'interview-revisit'
   | 'interview-history'
-  | 'limits-dashboard'
-  | 'limits-interview'
 
 export function shotUrl(shot: ShotName, theme: 'light' | 'dark'): string {
   return `/how-it-works/${theme}/${shot}.webp`
@@ -120,13 +117,10 @@ export const STEPS: Step[] = [
     scenes: [
       {
         title: 'Meet your dashboard',
-        body: 'Your topics and your daily usage live here. The tiles at the top show what you have left for today.',
+        body: 'Your topics and your progress live here, along with how your prep track tunes each mode.',
         shot: 'dashboard-empty',
         where: 'Dashboard',
-        hotspots: [
-          { x: 33.5, y: 31, label: 'What you have left today' },
-          { x: 87, y: 43.8, label: 'Add a topic here' },
-        ],
+        hotspots: [{ x: 87, y: 43.8, label: 'Add a topic here' }],
       },
       {
         title: 'Add a topic',
@@ -166,18 +160,17 @@ export const STEPS: Step[] = [
         body: 'Ask for an example, a simpler explanation or more depth. The tutor remembers the whole conversation.',
         shot: 'learn-followup',
         where: 'Python › Learn',
-        hotspots: [{ x: 34.5, y: 88.7, label: 'Messages left today' }],
       },
       {
         title: 'It stays on topic',
-        body: 'Off-topic questions get a polite nudge back to your preparation, so your messages go where they count.',
+        body: 'Off-topic questions get a polite nudge back to your preparation, so every chat stays useful.',
         shot: 'learn-guardrail',
         where: 'Python › Learn',
       },
     ],
     tips: [
       'One chat per topic, saved automatically. Leave any time and pick up exactly where you left off.',
-      'Each message you send uses one Learn message. The tutor’s first reply in a new chat is free.',
+      'There is no limit on messages, so keep asking until it clicks.',
     ],
   },
   {
@@ -299,72 +292,6 @@ export const STEPS: Step[] = [
   },
 ]
 
-export const LIMITS_STEP: Step = {
-  id: 'limits',
-  nav: 'Limits',
-  summary: 'Know your daily limits',
-  icon: Gauge,
-  title: 'Daily limits, explained',
-  lead: 'To keep PrepPilot fair for everyone, the AI-powered actions have daily limits. Here is how they work.',
-  scenes: [
-    {
-      title: 'Check what you have left',
-      body: 'The tiles on your dashboard always show how many uses you have left.',
-      shot: 'dashboard-empty',
-      where: 'Dashboard',
-      hotspots: [{ x: 33.5, y: 31, label: 'What you have left today' }],
-    },
-    {
-      title: 'When a limit is used up',
-      body: 'The tile turns red and tells you exactly when that action comes back.',
-      shot: 'limits-dashboard',
-      where: 'Dashboard',
-      hotspots: [{ x: 72, y: 27, label: 'Shows when it comes back' }],
-    },
-    {
-      title: 'Everything else keeps working',
-      body: 'A locked action says when you can use it again. Your chats, reports and history stay open.',
-      shot: 'limits-interview',
-      where: 'Python › Mock Interview',
-      hotspots: [{ x: 59.5, y: 72.5, label: 'When you can start again' }],
-    },
-  ],
-  tips: [],
-}
-
-export type LimitKey = 'topics' | 'learnMessages' | 'tests' | 'mockInterviews'
-
-export const LIMIT_ACTIONS: Array<{ key: LimitKey; label: string; unit: string }> = [
-  { key: 'topics', label: 'Topics', unit: 'at a time' },
-  { key: 'learnMessages', label: 'Learn messages', unit: 'per 24 hours' },
-  { key: 'tests', label: 'Tests', unit: 'per 24 hours' },
-  { key: 'mockInterviews', label: 'Mock interviews', unit: 'per 24 hours' },
-]
-
-/** null means no limit. */
-export const TIERS: Record<'student' | 'standard', { label: string; hint: string; limits: Record<LimitKey, number | null> }> = {
-  student: {
-    label: 'College students',
-    hint: 'If you picked College student in your profile',
-    limits: { topics: 2, learnMessages: 30, tests: 2, mockInterviews: 1 },
-  },
-  standard: {
-    label: 'Everyone else',
-    hint: 'Any other experience level',
-    limits: { topics: null, learnMessages: 50, tests: 3, mockInterviews: 2 },
-  },
-}
-
-export const COSTS_A_USE = ['Sending a message in Learn Mode', 'Starting a new test', 'Starting a new mock interview']
-
-export const ALWAYS_FREE = [
-  'The tutor’s first reply in a new chat',
-  'Submitting a test and getting your report',
-  'Answering questions and ending an interview',
-  'Resuming a test or interview in progress',
-  'Reading your chats, reports and history',
-]
-
 export const LEARN_PROMPTS = [
   'Explain decorators like I am seeing them for the first time',
   'Give me 5 questions interviewers ask about DBMS normalization',
@@ -387,12 +314,12 @@ export const FAQS: Array<{ q: string; a: string }> = [
     a: 'Only you. Every topic, chat and report belongs to your account and nobody else can open it.',
   },
   {
-    q: 'What happens when I reach a limit?',
-    a: 'Only that action locks, and the app shows exactly when it comes back: 24 hours after your last use, with the full limit restored. You can still read your chats, reports and history.',
+    q: 'Is there a limit on how much I can practise?',
+    a: 'No. PrepPilot is free, with no daily limits: add as many topics, send as many messages and take as many tests and mock interviews as you like.',
   },
   {
     q: 'What if the AI fails halfway?',
-    a: 'If a Learn message, test or interview cannot be generated, the use is given back automatically, so you never lose a use to an error.',
+    a: 'Just try again. Your chats, tests and reports are saved as you go, so an error never loses your earlier work.',
   },
   {
     q: 'Will I lose my progress if I close the tab?',

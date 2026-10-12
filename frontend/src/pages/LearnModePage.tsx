@@ -1,12 +1,10 @@
 import { useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { getChatSession, getOlderMessages } from '../api/chat'
 import { extractErrorMessage, listTopics } from '../api/topics'
 import { streamChatMessage } from '../api/chatStream'
-import { USAGE_QUERY_KEY, formatAvailableAt, isLocked } from '../api/usage'
-import { useUsage } from '../features/usage/useUsage'
 import { trackEvent } from '../features/analytics/clarity'
 import {
   olderMessagesLoadFailed,
@@ -31,9 +29,6 @@ export default function LearnModePage() {
   const session = useAppSelector((state) => (topicId ? state.chat.sessionsByTopicId[topicId] : undefined))
   const topicsQuery = useQuery({ queryKey: ['topics'], queryFn: listTopics, staleTime: Infinity })
   const topicName = topicsQuery.data?.find((t) => t.id === topicId)?.name
-  const queryClient = useQueryClient()
-  const learnUsage = useUsage().data?.learnMessages
-  const outOfMessages = isLocked(learnUsage)
 
   useEffect(() => {
     if (!topicId) return
@@ -68,7 +63,6 @@ export default function LearnModePage() {
       },
       onFatalError: (message) => dispatch(streamErrored({ topicId, message })),
     })
-    queryClient.invalidateQueries({ queryKey: USAGE_QUERY_KEY })
   }
 
   if (!topicId) return null
@@ -96,16 +90,7 @@ export default function LearnModePage() {
           )}
           <div className="border-t border-border bg-surface px-4 py-3 sm:px-6">
             <div className="mx-auto w-full max-w-3xl">
-              {learnUsage && (
-                <p className={`mb-2 text-xs ${outOfMessages ? 'font-medium text-danger' : 'text-muted'}`}>
-                  {outOfMessages
-                    ? `You've used all ${learnUsage.limit} Learn messages.${
-                        learnUsage.availableAt ? ` You can send more ${formatAvailableAt(learnUsage.availableAt)}.` : ''
-                      }`
-                    : `${learnUsage.remaining} of ${learnUsage.limit} Learn messages left`}
-                </p>
-              )}
-              <MessageInput onSend={handleSend} disabled={session.status === 'streaming' || outOfMessages} />
+              <MessageInput onSend={handleSend} disabled={session.status === 'streaming'} />
             </div>
           </div>
         </div>

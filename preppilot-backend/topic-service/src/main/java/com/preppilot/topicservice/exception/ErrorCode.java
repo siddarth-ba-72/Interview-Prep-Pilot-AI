@@ -9,10 +9,6 @@ public enum ErrorCode {
     USER_INVALID_CONFIG(HttpStatus.BAD_REQUEST, "Invalid configuration"),
     USER_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "Unauthorized access"),
 
-    // Usage limits (403/429)
-    TOPIC_LIMIT_REACHED(HttpStatus.FORBIDDEN, "Topic limit reached"),
-    USAGE_LIMIT_REACHED(HttpStatus.TOO_MANY_REQUESTS, "Usage limit reached"),
-
     // Admin dashboard (403)
     ADMIN_ACCESS_REQUIRED(HttpStatus.FORBIDDEN, "Admin access required"),
 

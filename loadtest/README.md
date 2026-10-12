@@ -4,7 +4,7 @@ This folder runs the whole PrepPilot stack locally with a **fake LLM** in place 
 
 | Path | What it is |
 |---|---|
-| `docker-compose.yml` | The isolated stack: its own MongoDB, test-only secrets, raised usage limits, and `fake-llm` |
+| `docker-compose.yml` | The isolated stack: its own MongoDB, test-only secrets, and `fake-llm` |
 | `fake-llm/` | An OpenAI-compatible server that answers every PrepPilot prompt like a real model |
 | `../e2e/` | Playwright tests: functional end-to-end tests and browser-based load journeys |
 
@@ -204,6 +204,3 @@ A browser uses about 100-300 MB, so one machine runs tens of users, not thousand
 - `docker compose -f loadtest/docker-compose.yml logs -f topic-service ai-service` for errors
 - MongoDB at `mongodb://root:loadtest@localhost:27019/?authSource=admin` (mongosh or Compass)
 
-### Usage limits
-
-The stack raises all usage limits to 100,000 through `SPRING_APPLICATION_JSON` on topic-service, so virtual users aren't stopped by `429 USAGE_LIMIT_REACHED`. To test the real limits, remove that variable and restart topic-service.

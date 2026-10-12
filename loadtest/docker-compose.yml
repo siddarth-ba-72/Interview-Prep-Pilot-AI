@@ -9,7 +9,6 @@
 #   fails with a 401 instead of spending tokens.
 # - Its own MongoDB container and volume; none of your .env files are read (they point at Atlas).
 # - All secrets below are test-only values.
-# - Usage limits are raised so virtual users don't hit 429 after a handful of requests.
 #
 # Ports (bound to localhost only): frontend 3000, gateway 8080, fake-llm 8090, MongoDB 27019.
 # They clash with the regular docker-compose.yml stack, so stop that one first.
@@ -103,12 +102,6 @@ services:
       MONGODB_URI: *mongodb-uri
       JWT_SECRET: *jwt-secret
       INTERNAL_API_KEY: *internal-api-key
-      # Same shape as usage-limits in application.yml, raised so load tests measure the system
-      # instead of the quota. Remove this to load-test the real limits.
-      SPRING_APPLICATION_JSON: >-
-        {"usage-limits": {
-          "student": {"max-topics": 1000, "learn-messages": 100000, "tests": 100000, "mock-interviews": 100000},
-          "standard": {"learn-messages": 100000, "tests": 100000, "mock-interviews": 100000}}}
     depends_on:
       mongodb:
         condition: service_healthy

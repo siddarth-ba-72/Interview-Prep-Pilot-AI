@@ -480,20 +480,13 @@ After all questions → Topic Service aggregates evaluations into Interview Repo
 - Never accept userId from request body or URL path for security-sensitive operations
 
 ### AI Service Security (Internal Key Only)
-Only Topic Service may call the AI Service; every request must carry the shared `X-Internal-Api-Key`, otherwise 401. A bare `X-User-Id` is not accepted: the AI Service has a public URL and every call spends LLM tokens. Users reach the AI only through Topic Service, which checks their token and usage limits first.
+Only Topic Service may call the AI Service; every request must carry the shared `X-Internal-Api-Key`, otherwise 401. A bare `X-User-Id` is not accepted: the AI Service has a public URL and every call spends LLM tokens. Users reach the AI only through Topic Service, which checks their token first.
 
-### Usage Limits
-Topic Service limits AI-backed actions per user (`UsageLimitService`, configured under `usage-limits` in its `application.yml`). The tier comes from the `experienceLevel` token claim: `STUDENT` gets the student tier, everyone else the standard tier.
+### Free, No Usage Limits
+PrepPilot is free and has no per-user usage limits: any number of topics, Learn messages, tests and mock interviews. (Earlier versions capped these per 24h; that code and `GET /api/v1/usage` are gone. A leftover `usage_windows` collection in `topics_db` is unused and can be dropped.)
 
-| Tier | Topics | Learn messages | Tests | Mock interviews |
-|---|---|---|---|---|
-| Student | 2 | 30 | 2 | 1 |
-| Standard | no limit | 50 | 3 | 2 |
-
-- Actions are counted over a sliding 24h window. The use that reaches the limit locks the action until 24h after that use; then the full limit is back.
-- What costs a use: sending a Learn message, starting a new test, starting a new mock interview. Resuming, submitting a test, answering and ending an interview, and the first Learn chat reply are free.
-- A use whose AI call fails is refunded. Over the limit returns `429 USAGE_LIMIT_REACHED` with `retryAt`; the topic limit returns `403 TOPIC_LIMIT_REACHED`.
-- State lives in the `usage_windows` collection (one document per user and action, TTL-cleaned), updated atomically so concurrent requests cannot both take the last slot. `GET /api/v1/usage` returns what is left.
+### Experience Tracks
+The onboarding experience answer (the `experienceLevel` token claim) still shapes the content. `STUDENT` gets the placement track: Learn and Test are pitched at campus placements and the mock interview is locked to student level. Every other answer gets the professional track, where the user picks the interview level and difficulty. The dashboard and the How it works page show this with `components/PrepTrackExplorer.tsx` (copy in `src/features/prepTrack/tracks.ts`; keep it in step with the STUDENT prompts in `ai-service/app/prompts.py`).
 
 ### Admin Dashboard (Read-Only)
 Pages `/admin` and `/admin/users/:userId`, for users whose role is `ADMIN`. Admins see each user's profile, topic names, and how many tests and mock interviews are active or completed. **Counts only: no scores, answers, reports or chats.** There are no admin write actions.
@@ -514,7 +507,7 @@ The frontend records sessions and heatmaps with Microsoft Clarity (`src/features
 
 - **Identity:** Clarity gets the user id plus `experience` and `role` tags, never the name or email.
 - **Masking:** answers, scores, reports, chats and admin data must not reach Clarity. Pages that show them use `<PageContainer mask>`; smaller elements (chat bubbles, results modal, the header name, a topic's average score, the feedback form) carry `data-clarity-mask="True"`. A new page or component that shows such data needs one of the two.
-- **Events:** `topic_created`, `learn_message_sent`, `test_started`, `test_submitted`, `interview_started`, `interview_completed`, `feedback_sent`, and `usage_limit_reached` / `topic_limit_reached` from the API error codes. Use `trackEvent`, which does nothing when Clarity is off.
+- **Events:** `topic_created`, `learn_message_sent`, `test_started`, `test_submitted`, `interview_started`, `interview_completed`, `feedback_sent`. Use `trackEvent`, which does nothing when Clarity is off.
 
 ---
 
@@ -564,7 +557,7 @@ See `specs/Rollout-Plan.md` and `specs/Tech-Decisions.md` for detailed phase bre
 | **JWT in-memory + refresh token in HTTP-only cookie** | Prevents XSS (no localStorage) and CSRF (access token not in cookie) |
 | **SSE Streaming** | Real-time user experience; responses appear as they're generated, not after full completion |
 | **Gradle (Kotlin DSL)** | Faster incremental builds, type-safe build scripts, modern Spring standard |
-| **Internal-key-only AI Service** | Its URL is public and every call costs LLM tokens, so only Topic Service (X-Internal-Api-Key) may call it; usage limits are enforced there |
+| **Internal-key-only AI Service** | Its URL is public and every call costs LLM tokens, so only Topic Service (X-Internal-Api-Key) may call it |
 
 ---
 

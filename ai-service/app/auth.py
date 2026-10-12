@@ -10,7 +10,7 @@ async def require_internal_api_key(x_internal_api_key: str | None = Header(defau
 
     This service has a public URL and every call spends LLM tokens, so a bare X-User-Id
     header is not accepted: anyone can send one. Users reach the AI only through
-    topic-service, which checks their access token and their usage limits first."""
+    topic-service, which checks their access token first."""
     if not (
         settings.internal_api_key
         and x_internal_api_key

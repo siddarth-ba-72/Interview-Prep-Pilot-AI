@@ -6,11 +6,11 @@ import api from '../api/axiosInstance'
 import { useNavigate } from 'react-router-dom'
 import { CircleHelp, Search, ShieldCheck, UserRoundPen, X } from 'lucide-react'
 import { createTopic, deleteTopic, extractErrorMessage, listTopics } from '../api/topics'
-import { USAGE_QUERY_KEY } from '../api/usage'
-import { useUsage } from '../features/usage/useUsage'
+import { EXPERIENCE_OPTIONS } from '../api/profile'
+import { trackFor } from '../features/prepTrack/tracks'
 import { trackEvent } from '../features/analytics/clarity'
 import NewTopicForm from '../components/NewTopicForm'
-import UsageSummary from '../components/UsageSummary'
+import PrepTrackExplorer from '../components/PrepTrackExplorer'
 import TopicList from '../components/TopicList'
 import AppHeader from '../components/AppHeader'
 import PageContainer from '../components/PageContainer'
@@ -31,7 +31,6 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('')
 
   const topicsQuery = useQuery({ queryKey: ['topics'], queryFn: listTopics })
-  const usageQuery = useUsage()
 
   const createMutation = useMutation({
     mutationFn: createTopic,
@@ -39,7 +38,6 @@ export default function DashboardPage() {
       setCreateError(null)
       trackEvent('topic_created')
       queryClient.invalidateQueries({ queryKey: ['topics'] })
-      queryClient.invalidateQueries({ queryKey: USAGE_QUERY_KEY })
     },
     onError: (error) => setCreateError(extractErrorMessage(error, 'Could not create topic')),
   })
@@ -50,7 +48,6 @@ export default function DashboardPage() {
     onSettled: () => setDeletingId(null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['topics'] })
-      queryClient.invalidateQueries({ queryKey: USAGE_QUERY_KEY })
     },
   })
 
@@ -62,8 +59,8 @@ export default function DashboardPage() {
 
   const topics = topicsQuery.data
   const topicCount = topics?.length ?? 0
-  const topicLimit = usageQuery.data?.topics.limit ?? null
-  const atTopicLimit = topicLimit !== null && topics !== undefined && topicCount >= topicLimit
+  const experienceLabel = EXPERIENCE_OPTIONS.find((option) => option.value === user?.experienceLevel)?.label
+  const profileChips = [experienceLabel, user?.preferredDomain].filter((chip): chip is string => Boolean(chip))
 
   const stats = useMemo(() => {
     let testCount = 0
@@ -141,14 +138,15 @@ export default function DashboardPage() {
             }}
             isSubmitting={createMutation.isPending}
             error={createError}
-            disabledReason={
-              atTopicLimit ? `You can have up to ${topicLimit} topics. Delete a topic to add a new one.` : null
-            }
             suggestions={topics ? suggestions : []}
           />
         </DashboardHero>
 
-        {usageQuery.data && <UsageSummary usage={usageQuery.data} topicCount={topicCount} />}
+        <PrepTrackExplorer
+          current={trackFor(user?.experienceLevel)}
+          profileChips={profileChips}
+          onEditProfile={() => navigate('/onboarding')}
+        />
 
         <section className="flex flex-col gap-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
