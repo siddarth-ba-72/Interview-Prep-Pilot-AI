@@ -1,647 +1,576 @@
-# PrepPilot - AI-Powered Interview Preparation Platform
+<div align="center">
 
-> An intelligent, personalized interview preparation platform that leverages AI to help users master technical topics and ace their interviews.
+<img src="frontend/public/favicon.svg" alt="PrepPilot logo" width="84" height="84">
 
-## Overview
+# PrepPilot
 
-**PrepPilot** is a comprehensive interview preparation application designed to help technical professionals prepare for their interviews in any domain. Whether you're preparing for a role in Spring Boot, Python, DevOps, Generative AI, or any other technology stack, PrepPilot provides an AI-powered personalized learning experience.
+**AI-powered interview preparation: learn a topic with an AI tutor, test yourself, then sit a timed mock interview.**
 
-Users can create topics they want to prepare for (e.g., "Spring Boot Transactions", "Python Decorators", "Kubernetes Deployments") and interact with the content through three distinct learning modes, each tailored for different preparation styles.
+[![Live app](https://img.shields.io/website?url=https%3A%2F%2Fprep-pilot-ui.vercel.app&label=live%20app&up_message=online&style=flat-square)](https://prep-pilot-ui.vercel.app)
+![Backend on AWS EC2](https://img.shields.io/badge/backend-AWS%20EC2-FF9900?style=flat-square)
+![Frontend on Vercel](https://img.shields.io/badge/frontend-Vercel-000000?style=flat-square&logo=vercel&logoColor=white)
+![React 18](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=white)
+![Spring Boot 3.3](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?style=flat-square&logo=springboot&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
+![MongoDB 7](https://img.shields.io/badge/MongoDB-7-47A248?style=flat-square&logo=mongodb&logoColor=white)
 
-### Key Features
+[**Open the live app**](https://prep-pilot-ui.vercel.app) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Architecture](#architecture) &nbsp;·&nbsp; [Run it locally](#run-it-locally) &nbsp;·&nbsp; [Deployment](#deployment)
 
-#### 1. **Learn Mode** 🎓
-An interactive chat-based learning experience where users can:
-- Ask the AI to explain topics with customizable learning styles (basic, interview-focused, deep-dive, etc.)
-- Have persistent chat conversations per topic
-- Ask follow-up questions and get clarifications
-- Build a comprehensive understanding of the topic through guided dialogue
+<br>
 
-#### 2. **Test Mode** 📝
-Assess your knowledge with AI-generated interview questions:
-- Multiple question formats: MCQs, descriptive questions, scenario-based challenges
-- Automatically graded answers with detailed feedback
-- Comprehensive test reports highlighting strengths and weak areas
-- Option to revisit weak areas with targeted learning content
-- All reports are persisted for future reference
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/sign-in.webp">
+  <img src="frontend/public/how-it-works/light/sign-in.webp" alt="PrepPilot sign-in page with the tagline: Walk into your next interview ready" width="860">
+</picture>
 
-#### 3. **Mock Interview Mode** 🎤
-Simulate real interview conditions with AI evaluation:
-- Questions asked one at a time, requiring detailed text responses
-- Real-time evaluation of each answer
-- Identification of strong and weak areas
-- Comprehensive interview report with actionable feedback
-- Option to revisit and strengthen weak areas
+</div>
 
-### Core Benefits
-- **Personalized Learning**: AI adapts to your learning style and pace
-- **Comprehensive Feedback**: Detailed insights into your strengths and improvement areas
-- **Persistent Records**: All chat histories and reports are saved for future review
-- **Data Privacy**: Users only see their own topics and progress
-- **Flexible Preparation**: Multiple modes cater to different learning preferences
+## What it does
 
----
+You add the topics you are preparing for, such as Spring Boot, DBMS, System Design or any other technical subject, and practise each one in three modes. Every chat, test and interview is saved, and every report points you to the next step.
 
-## Technology Stack
-
-### Frontend
-- **React 18+** - Modern UI framework with functional components and hooks
-- **TypeScript** - Type-safe JavaScript for reliability
-- **Redux Toolkit** - Global state management for auth and UI state
-- **React Query (TanStack Query)** - Server state management with intelligent caching
-- **Axios** - HTTP client with JWT token management
-- **React Router** - Client-side navigation
-- **Vite** - Lightning-fast build tool with native TypeScript support
-
-### Backend Services
-- **API Gateway** - Spring Cloud Gateway
-  - Routes all client traffic
-  - JWT validation and token-based authentication
-  - CORS handling and rate limiting
-  
-- **User Service** - Spring Boot 4.x with Java 21
-  - User registration and login (email/password)
-  - Google OAuth 2.0 integration
-  - JWT token management and refresh tokens
-  
-- **Topic Service** - Spring Boot 4.x with Java 21
-  - Topic management and CRUD operations
-  - Chat session persistence (Learn mode)
-  - Test and interview session management
-  - Report generation and storage
-  
-- **AI Service** - FastAPI (Python)
-  - Stateless AI orchestration
-  - LLM integration (OpenAI or Gemini, chosen by `LLM_PROVIDER`)
-  - Streaming responses via Server-Sent Events (SSE)
-  - Dual authentication (internal service key + JWT)
-
-### Database
-- **MongoDB 7.0** - Document database with two logical databases
-  - `users_db` - User profiles, authentication data
-  - `topics_db` - Topics, chat messages, sessions, reports
-
-### Infrastructure
-- **Docker & Docker Compose** - Containerization and local orchestration
-- **Gradle** - Build tool for Java services (with Kotlin DSL)
-- **NGINX** - Web server for frontend in production
-
----
-
-## System Architecture
-
-### High-Level Overview
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Browser (React SPA)                  │
-│                   Port: 3000 / Port: 5173               │
-└────────────────────────┬────────────────────────────────┘
-                         │ HTTPS / SSE
-         ┌───────────────▼───────────────┐
-         │   API Gateway (Port: 8080)    │
-         │   Spring Cloud Gateway        │
-         │  - JWT Validation             │
-         │  - Request Routing            │
-         │  - CORS & Rate Limiting       │
-         └───┬──────────────┬────────┬───┘
-             │              │        │
-   ┌─────────▼──────┐ ┌────▼──────────┐ ┌──────────┐
-   │ User Service   │ │ Topic Service  │ │ AI Svc   │
-   │  Port: 8081    │ │  Port: 8082    │ │ P: 8000  │
-   │  - Auth        │ │  - Topics      │ │(Internal)│
-   │  - User Mgmt   │ │  - Sessions    │ │- LLM     │
-   │  - OAuth       │ │  - Reports     │ │- Streams │
-   └────────┬───────┘ └────┬──────────┘ └──────────┘
-            │              │  (internal API key)
-            └──────┬───────┘
-                   │
-         ┌─────────▼──────────────┐
-         │  MongoDB (Port 27017)  │
-         │  - users_db            │
-         │  - topics_db           │
-         └────────────────────────┘
-```
-
-### Request Flow Diagrams
-
-#### Authentication Flow
 ```mermaid
-sequenceDiagram
-    participant Browser
-    participant Gateway
-    participant UserService
-    participant Database
+flowchart LR
+    add(["Add a topic"]) --> learn["Learn<br/>chat with an AI tutor"]
+    learn --> test["Test<br/>20 questions, AI-graded"]
+    test --> interview["Mock Interview<br/>timed, one question at a time"]
+    test --> treport[/"Test report"/]
+    interview --> ireport[/"Interview report"/]
+    treport -- "revisit weak areas" --> learn
+    ireport -- "revisit weak areas" --> learn
+    treport -- "retest on weak areas" --> test
 
-    Browser->>UserService: POST /auth/login (email/password)
-    UserService->>Database: Verify credentials
-    UserService->>Browser: Access Token + Refresh Token (HTTP-only cookie)
-    
-    Browser->>Gateway: Request + Authorization: Bearer {token}
-    Gateway->>Gateway: Validate JWT signature & expiry
-    Gateway->>Gateway: Extract userId from JWT
-    Gateway->>Gateway: Add X-User-Id header
-    Gateway->>+UserService: Forwarded request + X-User-Id
-    UserService->>-Gateway: Response (user-scoped data only)
+    classDef mode fill:#4f46e5,stroke:#3730a3,color:#ffffff
+    classDef report fill:#0f766e,stroke:#115e59,color:#ffffff
+    class learn,test,interview mode
+    class treport,ireport report
 ```
 
-#### Learn Mode Chat Flow
-```mermaid
-sequenceDiagram
-    participant Browser
-    participant Gateway
-    participant TopicService
-    participant Database
-    participant AIService
-    participant LLM
-
-    Browser->>Gateway: POST /api/v1/sessions/{id}/messages
-    Gateway->>TopicService: Forward + X-User-Id header
-    
-    TopicService->>Database: Load chat history & topic context
-    TopicService->>AIService: POST /api/ai/chat (with context + history)
-    AIService->>AIService: Build prompt from template
-    AIService->>LLM: Stream completion request
-    LLM-->>AIService: Token by token (streaming)
-    AIService-->>TopicService: SSE stream
-    TopicService-->>Gateway: SSE stream forward
-    Gateway-->>Browser: SSE stream (real-time)
-    
-    rect rgb(200, 150, 255)
-        Browser->>Browser: Display streamed response
-    end
-    
-    rect rgb(150, 200, 255)
-        Note over TopicService,Database: After stream completes
-        TopicService->>Database: Persist complete message
-    end
-```
-
-#### Service-to-Service Communication
-```mermaid
-graph LR
-    A["Topic Service"] -->|X-Internal-Api-Key| B["AI Service"]
-    B -->|Stateless| C["LLM Provider"]
-    A -->|CRUD + SSE| D["MongoDB"]
-    style B fill:#ffcccc
-    style A fill:#ccffcc
-    style D fill:#ccccff
-```
-
----
-
-## Prerequisites
-
-### System Requirements
-- **Docker** (version 20.10+) and **Docker Compose** (version 2.0+)
-- **Node.js** (version 18+) for frontend development
-- **Java 21** for backend development
-- **Python 3.10+** for AI service development
-- **Git** for version control
-
-### Required API Keys & Accounts
-- **OpenAI API Key** (and optionally a **Gemini API Key**) - For LLM integration
-- **Google OAuth Credentials** - For Google sign-in
-- **MongoDB Connection URI** - MongoDB Atlas or local MongoDB
-
----
-
-## Environment Setup
-
-Each service requires a `.env` file with configuration. Copy the `.env.example` file in each directory and fill in the values.
-
-### 1. Root-Level Environment (`.env`)
-```bash
-# MongoDB credentials (used by docker-compose)
-MONGO_ROOT_USER=admin
-MONGO_ROOT_PASSWORD=securepassword123
-```
-
-### 2. Gateway (`.env`)
-Located in `preppilot-backend/gateway/.env`
-```bash
-# Core gateway config
-JWT_SECRET=your-super-secret-key-change-this-in-prod
-FRONTEND_ORIGIN=http://localhost:3000
-
-# Downstream service URLs
-USER_SERVICE_URL=http://user-service:8081
-TOPIC_SERVICE_URL=http://topic-service:8082
-AI_SERVICE_URL=http://ai-service:8000
-
-# Spring Boot config
-SERVER_PORT=8080
-```
-
-### 3. User Service (`.env`)
-Located in `preppilot-backend/user-service/.env`
-```bash
-# Database
-MONGODB_URI=mongodb://admin:securepassword123@mongodb:27017/users_db?authSource=admin
-
-# Authentication
-JWT_SECRET=your-super-secret-key-change-this-in-prod
-FRONTEND_ORIGIN=http://localhost:3000
-
-# Google OAuth
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-
-# Spring Boot config
-SERVER_PORT=8081
-```
-
-### 4. Topic Service (`.env`)
-Located in `preppilot-backend/topic-service/.env`
-```bash
-# Database
-MONGODB_URI=mongodb://admin:securepassword123@mongodb:27017/topics_db?authSource=admin
-
-# AI Service communication
-INTERNAL_API_KEY=your-internal-api-secret-key
-AI_SERVICE_URL=http://ai-service:8000
-
-# Spring Boot config
-SERVER_PORT=8082
-```
-
-### 5. AI Service (`.env`)
-Located in `ai-service/.env`
-```bash
-# Which provider every LLM call uses: openai or gemini
-LLM_PROVIDER=openai
-
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL=your-openai-model
-
-GEMINI_API_KEY=your-gemini-api-key
-GEMINI_MODEL=your-gemini-model
-
-# Service-to-service authentication
-INTERNAL_API_KEY=your-internal-api-secret-key
-```
-
-### 6. Frontend (`.env`)
-Located in `frontend/.env`
-```bash
-# API Gateway URL
-VITE_API_BASE_URL=http://localhost:8080
-```
-
-**Important**: All `.env` files are in `.gitignore`. Never commit real secrets to the repository.
-
----
-
-## Getting Started
-
-### Option 1: Docker Compose (Recommended - Full Stack)
-
-**Best for:** Testing all services together, end-to-end testing
-
-```bash
-# From project root
-
-# 1. Set up all .env files (see Environment Setup section)
-
-# 2. Build and start all services
-docker-compose up --build
-
-# 3. Access the application
-# Frontend:    http://localhost:3000
-# API Gateway: http://localhost:8080
-# MongoDB:     mongodb://localhost:27017 (if exposed)
-```
-
-**Useful Docker Compose commands:**
-```bash
-# Stop all services
-docker-compose down
-
-# View logs from all services
-docker-compose logs -f
-
-# View logs from specific service
-docker-compose logs -f frontend
-
-# Rebuild without cache
-docker-compose up --build --no-cache
-
-# Remove volumes (fresh database)
-docker-compose down -v
-```
-
----
-
-### Option 2: Local Development (Individual Services)
-
-**Best for:** Focused development on specific services with hot-reload
-
-#### Frontend Development
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start dev server (Port 5173 with hot-reload)
-npm run dev
-
-# Build for production
-npm run build
-
-# Type checking
-npm run type-check
-
-# Linting
-npm run lint
-
-# Format code
-npm run format
-```
-
-#### Java Services (Gateway, User Service, Topic Service)
-```bash
-cd preppilot-backend/gateway  # or user-service or topic-service
-
-# Build the service
-./gradlew build
-
-# Run locally
-./gradlew bootRun
-
-# Run tests
-./gradlew test
-
-# Run specific test
-./gradlew test --tests "com.preppilot.gateway.SomeTest"
-
-# Clean build
-./gradlew clean build
-```
-
-#### AI Service
-```bash
-cd ai-service
-
-# Create virtual environment (if not already done)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run development server (Port 8000 with auto-reload)
-uvicorn main:app --reload
-
-# Run tests
-pytest
-
-# Format code
-black .
-```
-
----
-
-## Development Workflow
-
-### Starting Fresh Local Setup
-
-```bash
-# 1. Clone and navigate to project
-git clone <repo-url>
-cd int-prep-ai
-
-# 2. Set up environment files
-cp preppilot-backend/gateway/.env.example preppilot-backend/gateway/.env
-cp preppilot-backend/user-service/.env.example preppilot-backend/user-service/.env
-cp preppilot-backend/topic-service/.env.example preppilot-backend/topic-service/.env
-cp ai-service/.env.example ai-service/.env
-cp frontend/.env.example frontend/.env
-
-# 3. Fill in real values in .env files (API keys, secrets, etc.)
-
-# 4. Start the full stack
-docker-compose up --build
-
-# 5. Access at http://localhost:3000
-```
-
-### Debugging
-
-#### View service logs
-```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f topic-service
-docker-compose logs -f ai-service
-
-# Follow new logs only
-docker-compose logs -f --tail=50
-```
-
-#### Database inspection
-```bash
-# Connect to MongoDB from your local machine
-mongodb://admin:securepassword123@localhost:27017/?authSource=admin
-
-# Common tools
-# - MongoDB Compass (GUI)
-# - mongosh (CLI)
-# - Visual Studio Code MongoDB extension
-```
-
-#### Test a single endpoint
-```bash
-# Example: Get topics for authenticated user
-curl -H "Authorization: Bearer <your-jwt-token>" \
-     http://localhost:8080/api/v1/topics
-```
-
----
-
-## Key Design Principles
-
-### Security
-- **User ID Trust**: Only derived from JWT via `X-User-Id` header injected by Gateway
-- **Token Storage**: JWT stored in memory (not localStorage) to prevent XSS; refresh token in HTTP-only cookie
-- **Access Control**: Users only see their own topics and reports
-- **AI Service Not Publicly Exposed**: All traffic routed through Gateway; AI service has no public network access
-
-### Scalability
-- **Stateless Services**: Each service can be scaled independently
-- **AI Service Stateless**: No database; all context passed per-request
-- **SSE Streaming**: Enables real-time responses without long polling
-
-### Reliability
-- **Persistent Chat & Reports**: All user data persisted to MongoDB immediately after generation
-- **Service Health Checks**: Each service exposes `/actuator/health` or `/health`
-- **Error Consistency**: Standardized error response format across all services
-
-### Development Experience
-- **Docker Compose**: Single command to spin up entire stack locally
-- **Hot-Reload**: Frontend and AI service support live development
-- **Type Safety**: TypeScript frontend + Kotlin DSL Gradle scripts + Java generics
-
----
-
-## Troubleshooting
-
-### Port Already in Use
-```bash
-# Find process using port (e.g., 8080)
-lsof -i :8080
-
-# Kill process
-kill -9 <PID>
-```
-
-### Docker Container Issues
-```bash
-# Remove all containers and volumes
-docker-compose down -v
-
-# Rebuild from scratch
-docker-compose up --build
-
-# Check for disk space (Docker can run out of space)
-docker system prune -a
-```
-
-### MongoDB Connection Errors
-```bash
-# Verify MongoDB is running
-docker-compose ps mongodb
-
-# Check logs
-docker-compose logs mongodb
-
-# Reset database
-docker-compose down -v
-docker-compose up mongodb
-```
-
-### Frontend Can't Connect to API
-- Ensure `VITE_API_BASE_URL` in `frontend/.env` matches Gateway URL
-- Ensure Gateway is running: `curl http://localhost:8080/actuator/health`
-- Check browser console for CORS errors
-
-### AI Service Not Responding
-- Verify `LLM_API_KEY` is correct in `ai-service/.env`
-- Check OpenAI API quota and billing
-- Review AI service logs: `docker-compose logs -f ai-service`
-
----
-
-## CI/CD & Production Deployment (Backend Services)
-
-`gateway`, `user-service`, and `topic-service` are each deployed independently
-to their own AWS EC2 instance via GitHub Actions. `cache-service` is a shared
-library module (no `bootJar`) consumed by the other three — it is never
-deployed on its own, but changes to it trigger all three deploy pipelines
-since they depend on it.
-
-### Pipeline overview
-
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `.github/workflows/deploy-gateway.yml` | push to `main` touching `preppilot-backend/gateway/**` or `cache-service/**` | test → bootJar → deploy to gateway's EC2 instance |
-| `.github/workflows/deploy-user-service.yml` | push to `main` touching `preppilot-backend/user-service/**` or `cache-service/**` | test → bootJar → deploy to user-service's EC2 instance |
-| `.github/workflows/deploy-topic-service.yml` | push to `main` touching `preppilot-backend/topic-service/**` or `cache-service/**` | test → bootJar → deploy to topic-service's EC2 instance |
-| `.github/workflows/_deploy-service-reusable.yml` | called by the 3 workflows above | shared test/build/deploy logic (not run directly) |
-| `.github/workflows/rollback-service.yml` | manual (`workflow_dispatch`), pick a service | restores the last backup jar on that service's EC2 instance and restarts it |
-
-All three deploy workflows can also be triggered manually from the Actions
-tab (`workflow_dispatch`) without needing a code change.
-
-### What happens on each deploy
-
-1. `./gradlew :<service>:test` — fails the pipeline if tests fail, nothing is deployed.
-2. `./gradlew :<service>:bootJar` — builds the runnable Spring Boot jar.
-3. The jar is uploaded as a GitHub Actions build artifact, then `scp`'d to
-   `/preppilot/<service>/webapp/app.jar.new` on that service's EC2 instance.
-4. Over SSH, the instance:
-   - stops the systemd service,
-   - copies the **currently running** `webapp/app.jar` into `backup/app.jar` (so there's always exactly one previous good version on disk),
-   - promotes `app.jar.new` to `webapp/app.jar`,
-   - restarts the systemd service and prints its status.
-
-### EC2 instance layout (one per service)
-
-```
-/preppilot/<service>/webapp/app.jar   <- currently running jar
-/preppilot/<service>/backup/app.jar   <- previous jar (for rollback)
-/preppilot/<service>/.env             <- real runtime secrets, never committed
-/etc/systemd/system/<service>.service <- systemd unit, Restart=always
-```
-
-### One-time EC2 setup (per instance, done manually before first deploy)
-
-The `deploy/` folder at the repo root holds the assets for this manual
-bootstrap step. **GitHub Actions never reads from `deploy/`** — it only
-exists so you (a human) can provision each EC2 box once, after which all
-future deploys/rollbacks go entirely through the Actions workflows.
-
-```bash
-# from your local machine, for each service + its EC2 host:
-scp deploy/systemd/<service>.service deploy/systemd/setup-ec2.sh ec2-user@<host>:/tmp/
-ssh ec2-user@<host>
-cd /tmp && sudo ./setup-ec2.sh <service>
-# then fill in real secrets:
-sudo nano /preppilot/<service>/.env
-```
-
-`setup-ec2.sh <service>` creates the `preppilot` system user, the
-`webapp`/`backup` directories, an empty `.env`, and installs + enables the
-`<service>.service` systemd unit. Repeat for `gateway`, `user-service`, and
-`topic-service` on their respective instances.
-
-Also required once per instance: add the GitHub Actions deploy SSH **public**
-key to that instance's `~/.ssh/authorized_keys` (the matching **private** key
-goes into GitHub, see below — never committed to the repo).
-
-### Required GitHub configuration
-
-Create 3 GitHub **Environments**, each scoping its own secrets so the shared
-reusable workflow resolves `secrets.EC2_HOST` etc. to the right instance:
-
-| Environment | Secrets |
+## Features
+
+<table>
+  <tr>
+    <td width="56%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset=".github/assets/learn-mode-dark.webp">
+        <img src=".github/assets/learn-mode-light.webp" alt="Learn Mode: the AI tutor answers a follow-up question with a code example">
+      </picture>
+    </td>
+    <td valign="top">
+      <h3>💬 Learn Mode</h3>
+      <p>A chat with an AI tutor that first asks what you already know and how deep you want to go, then teaches.</p>
+      <ul>
+        <li>Answers stream in as they are written, with headings, examples and code</li>
+        <li>One saved chat per topic, so you can pick up where you left off</li>
+        <li>Off-topic questions get a polite nudge back to your preparation</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="56%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/test-report.webp">
+        <img src="frontend/public/how-it-works/light/test-report.webp" alt="Test report: score summary, strengths, areas for improvement and a per-question breakdown">
+      </picture>
+    </td>
+    <td valign="top">
+      <h3>📝 Test Mode</h3>
+      <p>A freshly written 20-question test for your topic and level: 10 multiple-choice and 10 written.</p>
+      <ul>
+        <li>Written answers are graded by AI against a model answer</li>
+        <li>Multiple-choice scores +1 or −1, written +5 or −5, blank 0. Maximum 60, pass at 36</li>
+        <li>The report lists strengths, areas to improve and feedback on every question</li>
+        <li>A retest focuses on what you got wrong last time</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="56%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/interview-feedback.webp">
+        <img src="frontend/public/how-it-works/light/interview-feedback.webp" alt="Mock interview: feedback on an answer rated Strong, with the timer running">
+      </picture>
+    </td>
+    <td valign="top">
+      <h3>🎤 Mock Interview</h3>
+      <p>One question at a time on a 30, 45 or 60 minute clock that does not pause.</p>
+      <ul>
+        <li>Each answer is rated Strong, Satisfactory or Needs work, with feedback</li>
+        <li>A strong answer can earn a follow-up question, as a real interviewer would ask</li>
+        <li>The final report gives a score out of 100, an overall assessment, and model answers for the questions you struggled with</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+**Also included**
+
+- **Prep tracks.** Two onboarding questions (your domain and your experience) set the level of everything. College students get the placement track; everyone else gets the professional track and picks the interview level and difficulty.
+- **Reports and history.** Every test and interview is kept. Reopen any report, or press **Revisit** to go straight back to Learn Mode for that topic.
+- **Sign in your way.** Email and password, or Google.
+- **Private by default.** Each user sees only their own topics, chats and reports.
+- **Light and dark themes**, plus a guided tour of the app at `/how-it-works`.
+- **Read-only admin pages** (`/admin`) for the owner: user list, topic names, and counts of tests and interviews. Admins cannot see scores, answers, reports or chats. A **Feedback** button on every page sends messages to an admin inbox.
+
+<details>
+<summary><b>More screenshots</b></summary>
+
+<br>
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/onboarding.webp">
+        <img src="frontend/public/how-it-works/light/onboarding.webp" alt="Onboarding questions">
+      </picture>
+      <br><sub>Onboarding: domain and experience</sub>
+    </td>
+    <td width="50%" align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/test-questions.webp">
+        <img src="frontend/public/how-it-works/light/test-questions.webp" alt="Test questions">
+      </picture>
+      <br><sub>Test Mode: multiple-choice section</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/test-results.webp">
+        <img src="frontend/public/how-it-works/light/test-results.webp" alt="Test results">
+      </picture>
+      <br><sub>Test Mode: instant result</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/test-retest.webp">
+        <img src="frontend/public/how-it-works/light/test-retest.webp" alt="Retest focused on weak areas">
+      </picture>
+      <br><sub>Retest built from your weak areas</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/interview-question.webp">
+        <img src="frontend/public/how-it-works/light/interview-question.webp" alt="Mock interview question">
+      </picture>
+      <br><sub>Mock Interview: answering on the clock</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/interview-report.webp">
+        <img src="frontend/public/how-it-works/light/interview-report.webp" alt="Mock interview report">
+      </picture>
+      <br><sub>Interview report: score and assessment</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/interview-model-answers.webp">
+        <img src="frontend/public/how-it-works/light/interview-model-answers.webp" alt="Model answers in the interview report">
+      </picture>
+      <br><sub>How a stronger candidate would have answered</sub>
+    </td>
+    <td align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/interview-history.webp">
+        <img src="frontend/public/how-it-works/light/interview-history.webp" alt="Interview history">
+      </picture>
+      <br><sub>Interview history</sub>
+    </td>
+  </tr>
+</table>
+
+Screenshots follow your GitHub theme (light or dark).
+
+</details>
+
+## Tech stack
+
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=react,ts,redux,tailwind,vite,spring,java,gradle,fastapi,py,mongodb,docker,nginx,aws,githubactions,vercel&perline=8" alt="React, TypeScript, Redux, Tailwind CSS, Vite, Spring, Java, Gradle, FastAPI, Python, MongoDB, Docker, NGINX, AWS, GitHub Actions, Vercel">
+</p>
+
+| Layer | Technology |
 |---|---|
-| `production-gateway` | `EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY` |
-| `production-user-service` | `EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY` |
-| `production-topic-service` | `EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY` |
+| **Frontend** | React 18, TypeScript 5, Vite 5, Tailwind CSS 4, Redux Toolkit (auth and UI state), TanStack Query (server state), React Router 6, Axios |
+| **API Gateway** | Spring Cloud Gateway on Spring Boot 3.3, Java 21 |
+| **User Service** | Spring Boot 3.3, Spring Security with the Google OAuth2 client, Spring Data MongoDB, JJWT, BCrypt |
+| **Topic Service** | Spring Boot 3.3 (MVC plus WebClient for streaming), Spring Data MongoDB, Caffeine cache |
+| **AI Service** | FastAPI, Uvicorn, Pydantic 2, OpenAI SDK. Talks to OpenAI, or to Gemini through its OpenAI-compatible endpoint |
+| **Data** | MongoDB 7 with two databases: `users_db` and `topics_db` |
+| **Tooling** | Gradle 8 (Kotlin DSL), Docker Compose, Playwright, GitHub Actions |
+| **Hosting** | **AWS EC2** for the backend services, Vercel for the frontend and the AI Service, MongoDB Atlas for data |
 
-Environments also let you add required reviewers / manual approval gates per
-service before it deploys to production.
+## Architecture
 
-### Emergency rollback
+> [!TIP]
+> The diagrams in this README are interactive on GitHub. Hover one for zoom and pan controls, or open it full screen. Sections marked with ▸ expand when you click them.
 
-Actions tab → **Rollback - Backend Service** → Run workflow → choose the
-service. This copies `backup/app.jar` back over `webapp/app.jar` and
-restarts the systemd service — no rebuild required.
+```mermaid
+flowchart TB
+    browser(["Browser"])
 
-See `deploy/README.md` for the full reference.
+    subgraph vercel["Vercel"]
+        fe["Frontend<br/>React 18 · Vite · Tailwind"]
+        ai["AI Service<br/>FastAPI · stateless"]
+    end
 
----
+    subgraph ec2["AWS EC2 · one instance per service · systemd"]
+        gw["API Gateway<br/>Spring Cloud Gateway · port 8080"]
+        us["User Service<br/>Spring Boot · port 8081"]
+        ts["Topic Service<br/>Spring Boot · port 8082"]
+    end
 
-## Contributing
+    subgraph mongo["MongoDB"]
+        udb[("users_db")]
+        tdb[("topics_db")]
+    end
 
-### Code Standards
-- **Frontend**: TypeScript, ESLint, Prettier
-- **Java Services**: Google Java Style Guide, Gradle formatted
-- **Python**: Black formatting, mypy type checking
-- **Git Commits**: Write clear, descriptive commit messages
+    llm{{"LLM provider<br/>OpenAI or Gemini"}}
 
-### Pull Request Process
-1. Create feature branch: `git checkout -b feature/your-feature`
-2. Make changes and commit with clear messages
-3. Ensure tests pass: `npm test` (frontend), `./gradlew test` (Java), `pytest` (Python)
-4. Push and create pull request
-5. Address review feedback
-6. Merge to main
+    browser -- "HTTPS" --> fe
+    fe -- "/api/v1 · Bearer JWT · SSE" --> gw
+    gw -- "auth · users · admin" --> us
+    gw -- "topics · chat · tests · interviews" --> ts
+    us --> udb
+    ts --> tdb
+    ts -- "internal calls only" --> ai
+    ai -- "prompts in, tokens out" --> llm
 
----
+    classDef web fill:#4f46e5,stroke:#3730a3,color:#ffffff
+    classDef java fill:#15803d,stroke:#166534,color:#ffffff
+    classDef py fill:#0f766e,stroke:#115e59,color:#ffffff
+    classDef db fill:#b45309,stroke:#92400e,color:#ffffff
+    classDef ext fill:#475569,stroke:#334155,color:#ffffff
+    class fe web
+    class gw,us,ts java
+    class ai py
+    class udb,tdb db
+    class browser,llm ext
 
-**Happy Learning! 🚀**
+    click fe href "https://github.com/siddarth-ba-72/Interview-Prep-Pilot-AI/tree/main/frontend" "Open frontend/" _blank
+    click gw href "https://github.com/siddarth-ba-72/Interview-Prep-Pilot-AI/tree/main/preppilot-backend/gateway" "Open gateway/" _blank
+    click us href "https://github.com/siddarth-ba-72/Interview-Prep-Pilot-AI/tree/main/preppilot-backend/user-service" "Open user-service/" _blank
+    click ts href "https://github.com/siddarth-ba-72/Interview-Prep-Pilot-AI/tree/main/preppilot-backend/topic-service" "Open topic-service/" _blank
+    click ai href "https://github.com/siddarth-ba-72/Interview-Prep-Pilot-AI/tree/main/ai-service" "Open ai-service/" _blank
+```
 
-PrepPilot makes interview preparation intelligent, personalized, and effective. Start by creating your first topic and choosing your preferred learning mode!
+| Service | Port | What it does | Code |
+|---|---|---|---|
+| **API Gateway** | 8080 | The single entry point. Verifies the JWT, adds `X-User-Id`, `X-User-Email` and `X-User-Experience` from its claims, routes by path, handles CORS, and turns non-admins away from `/api/v1/admin/**` | [`preppilot-backend/gateway`](preppilot-backend/gateway) |
+| **User Service** | 8081 | Registration, login, Google OAuth, refresh-token rotation, profile and onboarding answers, feedback, the admin user list | [`preppilot-backend/user-service`](preppilot-backend/user-service) |
+| **Topic Service** | 8082 | Topics, Learn chats, tests, mock interviews and reports. The only service allowed to call the AI Service | [`preppilot-backend/topic-service`](preppilot-backend/topic-service) |
+| **AI Service** | 8000 | Stateless. Builds prompts, keeps conversations on technical topics, calls the LLM, and streams tokens over SSE | [`ai-service`](ai-service) |
+| **MongoDB** | 27017 | `users_db` holds users, refresh tokens and feedback. `topics_db` holds topics, chats, tests, interviews and reports | |
+
+**Design choices worth knowing**
+
+- **Identity comes only from a verified token.** The gateway sets `X-User-Id` from the JWT. User Service and Topic Service verify the same token again and overwrite that header, so calling them directly without a valid token does not work.
+- **The AI Service is stateless and not open to the public.** Every request carries the full context, and only Topic Service can call it. Users reach the LLM only through Topic Service.
+- **Streaming end to end.** Tokens flow from the LLM through the AI Service, Topic Service and the gateway to the browser as Server-Sent Events.
+- **One switch for the LLM provider.** A single setting selects OpenAI or Gemini, with no code change.
+- **Interviews do not get stuck.** If an AI call fails mid-interview, Topic Service asks a built-in fallback question and the session carries on.
+
+## How it works
+
+<details>
+<summary><b>Sign-in and token refresh</b></summary>
+
+<br>
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant FE as React SPA
+    participant GW as API Gateway
+    participant US as User Service
+    participant DB as users_db
+
+    U->>FE: Email and password
+    FE->>GW: POST /api/v1/auth/login
+    GW->>US: Forward (auth paths need no token)
+    US->>DB: Find the user, verify the BCrypt hash
+    US-->>FE: Access token in the body, refresh token in an HttpOnly cookie
+    Note over FE: The access token is kept in memory (Redux), never in localStorage
+
+    FE->>GW: API call with Authorization Bearer token
+    GW->>GW: Verify signature and expiry
+    GW->>US: Forward with X-User-Id from the token
+    US->>US: Verify the token again
+    US-->>FE: This user's data only
+
+    Note over FE,US: 30 minutes later the access token has expired
+    FE->>GW: API call
+    GW-->>FE: 401
+    FE->>GW: POST /api/v1/auth/refresh (cookie sent by the browser)
+    GW->>US: Forward
+    US->>DB: Match the stored hash, rotate the refresh token
+    US-->>FE: New access token and a new cookie
+    FE->>GW: Retry the original call
+```
+
+Google sign-in uses the same tokens. The browser goes to `/oauth2/authorization/google`, Google redirects back to `/login/oauth2/code/google`, and User Service sets the refresh cookie and sends the browser to `/auth/callback` with the access token in the URL fragment.
+
+</details>
+
+<details>
+<summary><b>Learn Mode: a streamed chat reply</b></summary>
+
+<br>
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant FE as React SPA
+    participant GW as API Gateway
+    participant TS as Topic Service
+    participant DB as topics_db
+    participant AI as AI Service
+    participant LLM as OpenAI or Gemini
+
+    U->>FE: Types a message
+    FE->>GW: POST /api/v1/topics/{topicId}/chat/messages
+    GW->>TS: Forward with X-User-Id
+    TS->>DB: Save the user's message
+    TS->>AI: POST /ai/learn/stream with the topic and full chat history
+    AI->>LLM: Streamed completion, with instructions to stay on topic
+    loop Every token
+        LLM-->>AI: Token
+        AI-->>TS: SSE event
+        TS-->>GW: SSE event
+        GW-->>FE: SSE event
+        FE-->>U: Text appears as it is written
+    end
+    TS->>DB: Save the complete reply when the stream ends
+```
+
+</details>
+
+<details>
+<summary><b>Test Mode: generate, grade, report</b></summary>
+
+<br>
+
+The gateway sits between the browser and Topic Service on every call; it is left out here to keep the diagram short.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant FE as React SPA
+    participant TS as Topic Service
+    participant AI as AI Service
+    participant DB as topics_db
+
+    U->>FE: Start a test
+    FE->>TS: POST /api/v1/topics/{topicId}/tests
+    TS->>DB: Read the last report for this topic
+    TS->>AI: POST /ai/test/generate (weak areas from the last attempt)
+    AI-->>TS: 10 multiple-choice and 10 written questions
+    TS->>DB: Save the test session
+    TS-->>FE: Questions without the correct answers
+
+    U->>FE: Answer and submit
+    FE->>TS: POST /api/v1/topics/{topicId}/tests/{testId}/submit
+    TS->>AI: POST /ai/test/evaluate
+    AI-->>TS: Verdict and feedback per answer, strengths and weak areas
+    TS->>TS: Score the test
+    TS->>DB: Save the report, update the topic's average score
+    TS-->>FE: Report
+```
+
+</details>
+
+<details>
+<summary><b>Mock Interview: the life of a session</b></summary>
+
+<br>
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Setup
+    Setup --> Running: Start with 30, 45 or 60 minutes
+    state "In progress, clock running" as Running {
+        [*] --> Question
+        Question --> Feedback: Submit answer
+        Feedback --> Question: Follow-up or next theme
+    }
+    Running --> Completed: You end it
+    Running --> Completed: Time runs out
+    Running --> Completed: All themes covered
+    Completed --> Report: AI writes the report
+    Report --> [*]
+```
+
+Topic Service calls three AI endpoints: `/ai/interview/plan` once at the start to choose the themes, `/ai/interview/next-turn` after each answer for the rating, feedback and next question, and `/ai/interview/generate-report` at the end. You can leave and resume an interview that is in progress, but its clock keeps running while you are away.
+
+</details>
+
+<details>
+<summary><b>Data model</b></summary>
+
+<br>
+
+```mermaid
+erDiagram
+    users ||--o{ refresh_tokens : "signs in with"
+    users ||--o{ feedback : sends
+    users ||--o{ topics : owns
+    topics ||--o| chat_sessions : "has one"
+    topics ||--o{ test_sessions : has
+    test_sessions ||--o| test_reports : "graded into"
+    topics ||--o{ mock_interview_sessions : has
+    mock_interview_sessions ||--o| mock_interview_reports : "summarised in"
+
+    users {
+        string email
+        string displayName
+        string authProvider
+        string preferredDomain
+        string experienceLevel
+        string role
+    }
+    topics {
+        string userId
+        string name
+        int testCount
+        double avgScore
+    }
+```
+
+`users`, `refresh_tokens` and `feedback` live in `users_db`. Everything else lives in `topics_db` and refers to the user by id only.
+
+</details>
+
+## Run it locally
+
+The repository ships a self-contained stack that runs the whole application on your machine: the frontend, the gateway, both Spring services, the AI Service, its own MongoDB, and a fake LLM that stands in for the real model. It needs no accounts and no configuration.
+
+**You need** [Git](https://git-scm.com/downloads) and [Docker](https://docs.docker.com/get-docker/) (Docker Desktop, or Docker Engine with Compose v2). Nothing else has to be installed, because Java, Node.js and Python all run inside the containers.
+
+1. **Clone the repository.**
+
+   ```bash
+   git clone https://github.com/siddarth-ba-72/Interview-Prep-Pilot-AI.git
+   cd Interview-Prep-Pilot-AI
+   ```
+
+2. **Build and start every service.** The command returns once all of them are healthy. The first run takes several minutes while the images download their dependencies; later starts take seconds.
+
+   ```bash
+   docker compose -f loadtest/docker-compose.yml up --build -d --wait
+   ```
+
+3. **Open [http://localhost:3000](http://localhost:3000)**, choose **Register**, and create an account with any email and password.
+
+4. **Use the app.** Answer the two onboarding questions, add a topic such as Python, then try Learn, Test and Mock Interview.
+
+5. **Stop the stack** when you are done. Your data is kept for the next start.
+
+   ```bash
+   docker compose -f loadtest/docker-compose.yml down
+   ```
+
+**Good to know**
+
+- AI answers come from a built-in bank of realistic replies, delivered at roughly the speed of a real model. Generating a test takes 30 to 50 seconds.
+- Google sign-in is not available in the local stack. Use email and password.
+- The stack uses ports 3000 (app), 8080 (API), 8090 (fake LLM) and 27019 (MongoDB). Free them before you start.
+- The root `docker-compose.yml` runs the same services against a real LLM provider. It needs per-service environment files that are not part of this repository.
+
+| If you see | Do this |
+|---|---|
+| A "port is already allocated" error | Something else is using port 3000 or 8080. Stop it and run step 2 again |
+| The first build seems stuck | It is downloading Gradle, npm and pip dependencies. Give it a few minutes |
+| You are signed out when you reload the page | Use Chrome or Firefox for local work. They keep the session cookie on `http://localhost` |
+
+## Project structure
+
+| Path | What it holds |
+|---|---|
+| [`frontend/`](frontend) | React and TypeScript single-page app: pages, feature modules, the API client, and the product screenshots |
+| [`preppilot-backend/gateway/`](preppilot-backend/gateway) | Spring Cloud Gateway: routing, token check, CORS |
+| [`preppilot-backend/user-service/`](preppilot-backend/user-service) | Sign-in, Google OAuth, profiles, feedback, the admin user list |
+| [`preppilot-backend/topic-service/`](preppilot-backend/topic-service) | Topics, chats, tests, interviews, reports, and the client for the AI Service |
+| [`preppilot-backend/cache-service/`](preppilot-backend/cache-service) | Shared Caffeine cache library, built into the other services |
+| [`ai-service/`](ai-service) | FastAPI app: prompts, scope guardrails, LLM calls |
+| [`loadtest/`](loadtest) | The local stack with a fake LLM, plus the load-test runner |
+| [`e2e/`](e2e) | Playwright end-to-end tests and load journeys |
+| [`deploy/`](deploy) | EC2 setup script and systemd units |
+| [`.github/workflows/`](.github/workflows) | Lint, build, deploy and rollback pipelines |
+
+## Testing
+
+None of the automated tests call a real LLM. The browser tests run against the local stack described above.
+
+- **Unit tests** for the Java services run in the deploy pipeline before every build.
+- **End-to-end tests** in [`e2e/`](e2e) are Playwright specs that cover sign-in, the dashboard, Learn Mode, Test Mode, Mock Interview and feedback. See [`e2e/README.md`](e2e/README.md).
+- **Load tests** in [`loadtest/`](loadtest) run realistic browser journeys with smoke, stress, soak and chaos profiles, and report response-time percentiles for each step. See [`loadtest/README.md`](loadtest/README.md).
+- **Contract tests** check that the fake LLM still matches the prompts the AI Service sends.
+
+## Deployment
+
+| Part | Where it runs |
+|---|---|
+| **API Gateway, User Service, Topic Service** | **AWS EC2.** Each service has its own instance and runs as a Spring Boot jar under systemd |
+| **Frontend** | Vercel. It forwards API and OAuth requests to the gateway, so the browser only ever talks to one origin |
+| **AI Service** | Vercel, as a Python function |
+| **MongoDB** | MongoDB Atlas |
+
+### Backend on AWS EC2
+
+Each of the three Java services is deployed independently by GitHub Actions. A push to `main` deploys only the services whose code changed; a change to the shared `cache-service` library redeploys all three.
+
+```mermaid
+flowchart LR
+    push(["Push to main<br/>or manual run"]) --> pick{"What changed?"}
+    pick -- "gateway" --> wg["deploy-gateway.yml"]
+    pick -- "user-service" --> wu["deploy-user-service.yml"]
+    pick -- "topic-service" --> wt["deploy-topic-service.yml"]
+    pick -- "cache-service" --> wall["all three workflows"]
+
+    wg --> test
+    wu --> test
+    wt --> test
+    wall --> test
+
+    subgraph reusable["Shared pipeline: _deploy-service-reusable.yml"]
+        direction LR
+        test["Test<br/>gradlew test"] --> build["Build<br/>bootJar"]
+        build --> copy["Copy the jar<br/>to EC2 over SSH"]
+        copy --> swap["Back up the running jar,<br/>promote the new one,<br/>restart systemd"]
+    end
+
+    swap --> box[("EC2 instance<br/>of that service")]
+    rollback(["rollback-service.yml<br/>manual"]) -. "restore the backup jar" .-> box
+
+    classDef step fill:#15803d,stroke:#166534,color:#ffffff
+    classDef infra fill:#b45309,stroke:#92400e,color:#ffffff
+    class test,build,copy,swap step
+    class box infra
+```
+
+- **If the tests fail, nothing is deployed.**
+- **Each instance keeps the previous jar.** Rollback is a manual workflow (Actions → *Rollback - Backend Service* → pick the service) that puts that jar back and restarts the service, with no rebuild.
+- **systemd restarts a service** if it stops.
+- **Setting up a new instance** is a one-time manual step. The walkthrough is in [`deploy/README.md`](deploy/README.md).
+
+## Security
+
+- **Sessions.** A short-lived access token is held in memory, never in `localStorage`. A longer-lived refresh token sits in an `HttpOnly`, `Secure` cookie and is rotated every time it is used.
+- **Passwords** are hashed with BCrypt.
+- **User identity** always comes from the verified token, at the gateway and again inside each service. It is never read from a request body or from a header the client controls.
+- **The AI Service** takes requests only from Topic Service, so nobody can reach the LLM directly.
+- **Admins** are read-only and see counts, not content.
+- **Analytics** (Microsoft Clarity) run only in production, receive a user id but no name or email, and mask answers, scores, reports and chats.
+
+## Author
+
+Built by **Siddarth Ambannavar** ([@siddarth-ba-72](https://github.com/siddarth-ba-72)).
