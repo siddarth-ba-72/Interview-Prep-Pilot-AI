@@ -5,14 +5,12 @@ interface NewTopicFormProps {
   onCreate: (name: string) => Promise<void>
   isSubmitting: boolean
   error: string | null
-  /** Set when the user may not add a topic right now; disables the form and explains why. */
-  disabledReason?: string | null
   /** Topic ideas shown as chips; clicking one fills the input. */
   suggestions?: string[]
 }
 
-export default function NewTopicForm({ onCreate, isSubmitting, error, disabledReason, suggestions = [] }: NewTopicFormProps) {
-  const disabled = isSubmitting || Boolean(disabledReason)
+export default function NewTopicForm({ onCreate, isSubmitting, error, suggestions = [] }: NewTopicFormProps) {
+  const disabled = isSubmitting
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
@@ -72,8 +70,7 @@ export default function NewTopicForm({ onCreate, isSubmitting, error, disabledRe
           ))}
         </div>
       )}
-      {disabledReason && <p className="mt-2 text-sm text-muted">{disabledReason}</p>}
-      {error && !disabledReason && <p className="mt-2 text-sm font-medium text-danger">{error}</p>}
+      {error && <p className="mt-2 text-sm font-medium text-danger">{error}</p>}
     </div>
   )
 }
