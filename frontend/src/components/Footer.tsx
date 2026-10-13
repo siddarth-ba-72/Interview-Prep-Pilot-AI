@@ -1,4 +1,4 @@
-const PORTFOLIO_URL = 'https://siddarth-ba-72.github.io/siddarth-ba-72-portfolio/'
+const PORTFOLIO_URL = 'https://siddarth-ba-72.vercel.app/'
 
 export default function Footer() {
   return (
