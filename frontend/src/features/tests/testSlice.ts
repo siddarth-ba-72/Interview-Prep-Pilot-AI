@@ -84,6 +84,14 @@ const testSlice = createSlice({
       }
     },
 
+    /** Grading failed: the answers stay and the test can be submitted again. */
+    setTestSubmitFailed: (state, action: PayloadAction<{ topicId: string }>) => {
+      const { topicId } = action.payload
+      if (state.activeSessionByTopicId[topicId]) {
+        state.activeSessionByTopicId[topicId].status = 'in_progress'
+      }
+    },
+
     setTestCompleted: (state, action: PayloadAction<{
       topicId: string
       report: TestReportResponse
@@ -123,6 +131,7 @@ export const {
   setTestSession,
   updateAnswer,
   setTestSubmitting,
+  setTestSubmitFailed,
   setTestCompleted,
   openResultsModal,
   closeResultsModal,

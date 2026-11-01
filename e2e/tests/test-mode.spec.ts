@@ -8,7 +8,7 @@ test('a generated test can be answered, graded and reviewed', async ({ signedInP
 
   await expect(page.getByText('Attempt #1')).toBeVisible()
   await expect(page.getByRole('radio')).toHaveCount(40)
-  await expect(page.getByPlaceholder('Enter your answer here...')).toHaveCount(10)
+  await expect(page.getByPlaceholder('Enter your answer here…')).toHaveCount(10)
 
   await answerAllTestQuestions(page)
   await submitTest(page)
@@ -34,7 +34,7 @@ test('a finished test shows up in the history and its report survives a reload',
 
   await page.goto('/dashboard')
   await topicCard(page, name).getByRole('button', { name: 'Test history' }).click()
-  await expect(page.getByRole('cell', { name: /\/60/ })).toHaveCount(1)
+  await expect(page.getByRole('cell', { name: /\/ 60/ })).toHaveCount(1)
   await page.getByRole('button', { name: 'View Report' }).click()
   await expect(page.getByRole('heading', { name: 'Score Summary' })).toBeVisible()
 

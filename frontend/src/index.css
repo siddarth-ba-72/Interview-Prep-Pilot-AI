@@ -2,98 +2,127 @@
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * PrepPilot reads like an exam answer sheet: paper ground, ink text and actions, one ballpoint
+ * blue that only marks data (scores, progress, the current question), a red pen for what is wrong
+ * and a green tick for what is right. Depth is a 1px line or one tone step; only dialogs and menus
+ * cast a shadow.
+ *
+ * One superfamily, three cuts, one job each: Plex Sans for the interface, Plex Serif for every
+ * question the app asks, Plex Mono for code the learner writes or reads.
+ */
+
 @theme {
-  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-surface-hover: var(--surface-hover);
-  --color-fg: var(--fg);
-  --color-muted: var(--muted);
-  --color-border: var(--border);
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-wash: var(--wash);
+  --color-press: var(--press);
+  --color-line: var(--line);
+  --color-rule: var(--rule);
+  --color-edge: var(--edge);
 
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-fg: var(--primary-fg);
-  --color-primary-subtle: var(--primary-subtle);
-  --color-accent: var(--accent);
+  --color-ink: var(--ink);
+  --color-graphite: var(--graphite);
+  --color-pencil: var(--pencil);
 
-  --color-success: var(--success);
-  --color-success-fg: var(--success-fg);
-  --color-success-subtle: var(--success-subtle);
+  --color-ballpoint: var(--ballpoint);
+  --color-ballpoint-wash: var(--ballpoint-wash);
 
-  --color-danger: var(--danger);
-  --color-danger-fg: var(--danger-fg);
-  --color-danger-subtle: var(--danger-subtle);
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-action-ink: var(--action-ink);
 
-  --color-warning: var(--warning);
-  --color-warning-fg: var(--warning-fg);
-  --color-warning-subtle: var(--warning-subtle);
+  --color-tick: var(--tick);
+  --color-tick-wash: var(--tick-wash);
+  --color-tick-ink: var(--tick-ink);
+
+  --color-redpen: var(--redpen);
+  --color-redpen-wash: var(--redpen-wash);
+  --color-redpen-ink: var(--redpen-ink);
+
+  --color-marker: var(--marker);
+  --color-marker-wash: var(--marker-wash);
+  --color-marker-line: var(--marker-line);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 :root {
   color-scheme: light;
 
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --surface-hover: #f1f5f9;
-  --fg: #0f172a;
-  --muted: #64748b;
-  --border: #e2e8f0;
+  /* Grounds and lines */
+  --paper: #f5f5f2;
+  --sheet: #ffffff;
+  --wash: #efefea;
+  --press: #e6e6e0;
+  --line: #e2e2dc;
+  --rule: #ecece7;
+  --edge: #cdcdc6;
 
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-fg: #ffffff;
-  --primary-subtle: #eef2ff;
-  --accent: #8b5cf6;
+  /* Text, in three tiers, each at 4.5:1 or more on the surface it sits on */
+  --ink: #141413;
+  --graphite: #5c5c55;
+  --pencil: #6c6c64;
 
-  --success: #10b981;
-  --success-fg: #065f46;
-  --success-subtle: #d1fae5;
+  /* The one data hue */
+  --ballpoint: #1d55c0;
+  --ballpoint-wash: #e9eefa;
 
-  --danger: #ef4444;
-  --danger-fg: #991b1b;
-  --danger-subtle: #fee2e2;
+  /* The primary action is ink, not a brand colour */
+  --action: #141413;
+  --action-hover: #33332f;
+  --action-ink: #ffffff;
 
-  --warning: #f59e0b;
-  --warning-fg: #92400e;
-  --warning-subtle: #fef3c7;
+  /* Marks */
+  --tick: #2a7a34;
+  --tick-wash: #e2f3e4;
+  --tick-ink: #123d19;
+  --redpen: #c2262c;
+  --redpen-wash: #fdeceb;
+  --redpen-ink: #7d1b1e;
+  --marker: #87480a;
+  --marker-wash: #fdf6dd;
+  --marker-line: #eedb9e;
 }
 
 .dark {
   color-scheme: dark;
 
-  --bg: #0a0f1c;
-  --surface: #111827;
-  --surface-hover: #1e293b;
-  --fg: #f1f5f9;
-  --muted: #94a3b8;
-  --border: #263244;
+  --paper: #121211;
+  --sheet: #1a1a19;
+  --wash: #232321;
+  --press: #2d2d2a;
+  --line: #2b2b29;
+  --rule: #232321;
+  --edge: #42423e;
 
-  --primary: #6366f1;
-  --primary-hover: #818cf8;
-  --primary-fg: #ffffff;
-  --primary-subtle: #1e1b4b;
-  --accent: #a78bfa;
+  --ink: #f1f1ec;
+  --graphite: #b3b3ab;
+  --pencil: #9a9a92;
 
-  --success: #34d399;
-  --success-fg: #a7f3d0;
-  --success-subtle: #064e3b;
+  --ballpoint: #82a7f7;
+  --ballpoint-wash: #1b2540;
 
-  --danger: #f87171;
-  --danger-fg: #fecaca;
-  --danger-subtle: #450a0a;
+  --action: #f1f1ec;
+  --action-hover: #d8d8d2;
+  --action-ink: #121211;
 
-  --warning: #fbbf24;
-  --warning-fg: #fde68a;
-  --warning-subtle: #451a03;
+  --tick: #6cc77a;
+  --tick-wash: #17301c;
+  --tick-ink: #a6e6ae;
+  --redpen: #f2716f;
+  --redpen-wash: #3a1b1b;
+  --redpen-ink: #ffbab6;
+  --marker: #e9b44f;
+  --marker-wash: #2f2610;
+  --marker-line: #574617;
 }
 
 @layer base {
-  * {
-    box-sizing: border-box;
-  }
-
   html,
   body,
   #root {
@@ -103,30 +132,136 @@
 
   html {
     font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
     min-height: 100vh;
-    background: var(--color-bg);
-    color: var(--color-fg);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    background: var(--color-paper);
+    color: var(--color-ink);
   }
 
   a {
-    color: var(--color-primary);
-    text-decoration: none;
+    color: inherit;
+    text-decoration-thickness: from-font;
+    text-underline-position: from-font;
   }
 
-  a:hover {
-    text-decoration: underline;
+  ::selection {
+    background: var(--color-ballpoint-wash);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ballpoint);
+    outline-offset: 2px;
+  }
+
+  code,
+  kbd,
+  pre {
+    font-family: var(--font-mono);
   }
 }
 
+/* Markdown from the tutor, in the page's own ink and lines, light or dark. Unlayered on purpose:
+ the typography plugin's own colours sit in a layer and must lose to these. */
+.prose {
+  --tw-prose-body: var(--ink);
+  --tw-prose-headings: var(--ink);
+  --tw-prose-lead: var(--graphite);
+  --tw-prose-links: var(--ballpoint);
+  --tw-prose-bold: var(--ink);
+  --tw-prose-counters: var(--graphite);
+  --tw-prose-bullets: var(--edge);
+  --tw-prose-hr: var(--line);
+  --tw-prose-quotes: var(--ink);
+  --tw-prose-quote-borders: var(--edge);
+  --tw-prose-captions: var(--graphite);
+  --tw-prose-code: var(--ink);
+  --tw-prose-pre-code: var(--ink);
+  --tw-prose-pre-bg: var(--wash);
+  --tw-prose-th-borders: var(--edge);
+  --tw-prose-td-borders: var(--line);
+}
+
+.prose :where(pre) {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.prose :where(:not(pre) > code) {
+  background: var(--wash);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-weight: 400;
+}
+
+.prose :where(:not(pre) > code)::before,
+.prose :where(:not(pre) > code)::after {
+  content: none;
+}
+
+.prose :where(h1, h2, h3, h4) {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* The type scale. Five sizes do the work; each role is one decision. */
+@utility type-title {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+@utility type-section {
+  font-size: 1rem;
+  line-height: 1.4;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+@utility type-body {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+@utility type-label {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--color-graphite);
+}
+
+@utility type-meta {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-pencil);
+}
+
+/* Every question the app asks is printed in the serif, like an exam paper. */
+@utility type-question {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  text-wrap: pretty;
+}
+
+@utility figures {
+  font-variant-numeric: tabular-nums;
+}
+
 @layer utilities {
-  @keyframes modal-pop {
+  @keyframes dialog-in {
     from {
       opacity: 0;
-      transform: translateY(8px) scale(0.98);
+      transform: translateY(6px) scale(0.98);
     }
     to {
       opacity: 1;
@@ -134,44 +269,23 @@
     }
   }
 
-  .animate-modal-pop {
-    animation: modal-pop 0.18s ease-out;
-  }
-
-  /* How it works page */
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-12px);
-    }
-  }
-
-  @keyframes word-in {
+  @keyframes menu-in {
     from {
       opacity: 0;
-      transform: translateY(55%);
+      transform: translateY(-4px) scale(0.98);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateY(0) scale(1);
     }
   }
 
-  @keyframes grow-x {
+  @keyframes fill-in {
     from {
       transform: scaleX(0);
     }
     to {
       transform: scaleX(1);
-    }
-  }
-
-  @keyframes flow {
-    to {
-      background-position: 200% 0;
     }
   }
 
@@ -181,97 +295,35 @@
     }
   }
 
-  @keyframes pop-in {
-    from {
-      opacity: 0;
-      transform: scale(0.6);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+  .animate-dialog-in {
+    animation: dialog-in 0.2s var(--ease-out);
   }
 
-  .animate-pop-in {
-    animation: pop-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  .animate-menu-in {
+    animation: menu-in 0.16s var(--ease-out);
+    transform-origin: top right;
   }
 
-  .animate-float {
-    animation: float 7s ease-in-out infinite;
-  }
-
-  .animate-word-in {
-    animation: word-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-
-  .animate-grow-x {
-    animation: grow-x linear forwards;
+  .animate-fill-in {
+    animation: fill-in 0.6s var(--ease-out) both;
     transform-origin: left;
   }
 
-  .animate-flow {
-    background-size: 200% 100%;
-    animation: flow 2.4s linear infinite;
+  /* Used by the How it works scene timer */
+  .animate-progress {
+    animation: fill-in linear forwards;
+    transform-origin: left;
   }
 
   .animate-caret {
     animation: caret 1s step-end infinite;
   }
 
-  /* Dashboard */
-  @keyframes rise-in {
-    from {
-      opacity: 0;
-      transform: translateY(14px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes wave {
-    0%,
-    60%,
-    100% {
-      transform: rotate(0deg);
-    }
-    10%,
-    30% {
-      transform: rotate(14deg);
-    }
-    20%,
-    40% {
-      transform: rotate(-8deg);
-    }
-  }
-
-  .animate-rise-in {
-    animation: rise-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-
-  .animate-wave {
-    display: inline-block;
-    transform-origin: 70% 70%;
-    animation: wave 2.4s ease-in-out 0.4s 2;
-  }
-
-  /* A soft glow that follows the pointer; the element sets --spot-x / --spot-y on mouse move */
-  .spotlight {
-    background-image: radial-gradient(
-      320px circle at var(--spot-x, 50%) var(--spot-y, -40%),
-      color-mix(in srgb, var(--primary) 12%, transparent),
-      transparent 70%
-    );
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .animate-float,
-    .animate-flow,
-    .animate-word-in,
-    .animate-pop-in,
-    .animate-rise-in,
-    .animate-wave {
+    .animate-dialog-in,
+    .animate-menu-in,
+    .animate-fill-in,
+    .animate-caret {
       animation: none;
     }
   }

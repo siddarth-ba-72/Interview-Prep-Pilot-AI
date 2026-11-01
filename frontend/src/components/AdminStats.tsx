@@ -1,36 +1,43 @@
 import type { SessionCounts } from '../api/admin'
 
-/** A headline number for the admin overview, e.g. total users. */
-export function StatTile({ label, value, detail }: { label: string; value: number | undefined; detail?: string }) {
+export type Kpi = { label: string; value: number | undefined; detail?: string }
+
+/** Headline counts as one container split by rules: label over value, no tiles, no icons. */
+export function KpiStrip({ items }: { items: Kpi[] }) {
+  const columns = items.length === 4 ? 'sm:grid-cols-4' : items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'
   return (
-    <div className="rounded-xl border border-border bg-surface px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-extrabold leading-none tabular-nums text-fg">{value ?? '…'}</p>
-      {detail && <p className="mt-1.5 text-xs text-muted">{detail}</p>}
-    </div>
+    <dl className={`grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line ${columns}`}>
+      {items.map((item, index) => (
+        <div
+          key={item.label}
+          className={`bg-sheet px-5 py-4 ${items.length % 2 === 1 && index === items.length - 1 ? 'max-sm:col-span-2' : ''}`}
+        >
+          <dt className="type-label">{item.label}</dt>
+          <dd className="figures mt-1 text-2xl font-medium tracking-[-0.01em] text-ink">
+            {item.value !== undefined ? item.value.toLocaleString() : <span className="text-pencil">–</span>}
+          </dd>
+          {item.detail && <dd className="figures type-meta mt-0.5">{item.detail}</dd>}
+        </div>
+      ))}
+    </dl>
   )
 }
 
-/** Tests or interviews as one tile: all sessions, split into active and completed. */
-export function SessionTile({ label, counts }: { label: string; counts: SessionCounts | undefined }) {
-  return (
-    <StatTile
-      label={label}
-      value={counts ? counts.active + counts.completed : undefined}
-      detail={counts ? `${counts.active} active · ${counts.completed} completed` : undefined}
-    />
-  )
+export function sessionKpi(label: string, counts: SessionCounts | undefined): Kpi {
+  return {
+    label,
+    value: counts ? counts.active + counts.completed : undefined,
+    detail: counts ? `${counts.completed.toLocaleString()} completed · ${counts.active.toLocaleString()} active` : undefined,
+  }
 }
 
-/** Two-line table cell: completed, then active (highlighted while any are running). */
+/** Two-line numeric cell: completed, then active below it in grey. */
 export function SessionCountsText({ counts }: { counts: SessionCounts | undefined }) {
-  if (!counts) return <span className="text-muted">…</span>
+  if (!counts) return <span className="text-pencil">–</span>
   return (
-    <div className="tabular-nums">
-      <div className="font-semibold text-fg">{counts.completed} completed</div>
-      <div className={`text-xs ${counts.active > 0 ? 'font-semibold text-primary' : 'text-muted'}`}>
-        {counts.active} active
-      </div>
+    <div className="figures text-right">
+      <div className="text-ink">{counts.completed.toLocaleString()}</div>
+      <div className="type-meta">{counts.active.toLocaleString()} active</div>
     </div>
   )
 }

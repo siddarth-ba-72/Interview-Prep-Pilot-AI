@@ -1,143 +1,118 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import * as testAPI from '../api/tests'
-import * as topicAPI from '../api/topics'
 import AppHeader from '../components/AppHeader'
-import PageContainer from '../components/PageContainer'
+import TopicHeader from '../components/TopicHeader'
+import HistorySwitch from '../components/HistorySwitch'
+import PageContainer, { WIDTH } from '../components/PageContainer'
+import { TEST_MAX, TEST_PASS } from '../components/TopicRow'
+import { Button, buttonClass } from '../components/ui/Button'
+import EmptyState from '../components/ui/EmptyState'
+import Notice from '../components/ui/Notice'
+import ScoreBar from '../components/ui/ScoreBar'
+import StatusPill from '../components/ui/StatusPill'
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+function formatTime(date: Date) {
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
 
 export default function TestHistoryPage() {
   const navigate = useNavigate()
-  const { topicId } = useParams<{ topicId: string }>()
+  const { topicId = '' } = useParams<{ topicId: string }>()
 
-  const [topicName, setTopicName] = useState<string>('')
   const [sessions, setSessions] = useState<testAPI.TestSessionListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!topicId) return
-    Promise.all([topicAPI.listTopics(), testAPI.listTestSessions(topicId)])
-      .then(([topics, s]) => {
-        const t = topics.find((x) => x.id === topicId)
-        setTopicName(t?.name ?? 'Topic')
-        // Sort descending by completedAt
-        const sorted = [...s].sort(
-          (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
-        )
-        setSessions(sorted)
-      })
-      .catch(() => setError('Failed to load test history.'))
+    testAPI
+      .listTestSessions(topicId)
+      .then((items) =>
+        setSessions([...items].sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()))
+      )
+      .catch(() => setError('Could not load your test history.'))
       .finally(() => setLoading(false))
   }, [topicId])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-bg">
-        <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test History" />
-        <PageContainer maxWidth="max-w-4xl">
-          <p className="text-sm text-muted">Loading test history…</p>
-        </PageContainer>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-bg">
-        <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test History" />
-        <PageContainer maxWidth="max-w-4xl" className="flex flex-col items-start gap-4">
-          <p className="text-sm font-medium text-danger">{error}</p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-fg hover:bg-primary-hover"
-          >
-            Back to Dashboard
-          </button>
-        </PageContainer>
-      </div>
-    )
-  }
+  const openReport = (sessionId: string) => navigate(`/topics/${topicId}/tests/${sessionId}/report`)
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader
-        onBack={() => navigate('/dashboard')}
-        title={topicName}
-        subtitle="Test History"
-        actions={
-          <button
-            onClick={() => navigate(`/topics/${topicId}/test`)}
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover"
-          >
-            <Plus size={15} />
-            <span className="hidden sm:inline">New Test</span>
-          </button>
-        }
-      />
+    <div className="min-h-screen">
+      <AppHeader />
+      <TopicHeader topicId={topicId} active="history" />
 
-      <PageContainer mask maxWidth="max-w-4xl">
-        {sessions.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-14 text-center">
-            <p className="text-sm font-medium text-muted">No tests taken yet for this topic.</p>
-            <button
-              onClick={() => navigate(`/topics/${topicId}/test`)}
-              className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover"
-            >
-              Take Your First Test
-            </button>
-          </div>
-        ) : (
+      <PageContainer mask maxWidth={WIDTH.topic} className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <HistorySwitch topicId={topicId} current="tests" />
+          {sessions.length > 0 && (
+            <Link to={`/topics/${topicId}/test`} className={buttonClass({ variant: 'primary' })}>
+              New test
+            </Link>
+          )}
+        </div>
+
+        {loading && <div aria-label="Loading tests" className="h-40 rounded-lg border border-line bg-sheet" />}
+        {error && <Notice>{error}</Notice>}
+
+        {!loading && !error && sessions.length === 0 && (
+          <EmptyState
+            action={
+              <Button variant="primary" onClick={() => navigate(`/topics/${topicId}/test`)}>
+                Take a test
+              </Button>
+            }
+          >
+            No tests on this topic yet. A test is 20 questions, graded against a pass mark of {TEST_PASS}.
+          </EmptyState>
+        )}
+
+        {sessions.length > 0 && (
           <>
-            {/* Desktop table */}
-            <div className="hidden overflow-hidden rounded-2xl border border-border sm:block">
+            <p className="type-body text-graphite">{summarise(sessions)}</p>
+
+            {/* Table from the small breakpoint up */}
+            <div className="hidden overflow-hidden rounded-lg border border-line bg-sheet sm:block">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="bg-surface-hover text-xs font-semibold uppercase tracking-wide text-muted">
-                    <th className="w-14 px-4 py-3">#</th>
-                    <th className="px-4 py-3">Date &amp; Time</th>
-                    <th className="px-4 py-3">Score</th>
-                    <th className="px-4 py-3">Result</th>
-                    <th className="px-4 py-3 text-right">Action</th>
+                  <tr className="text-xs text-graphite">
+                    <th className="w-20 px-5 py-3 font-normal">Attempt</th>
+                    <th className="px-5 py-3 font-normal">Taken</th>
+                    <th className="w-56 px-5 py-3 text-right font-normal">Score</th>
+                    <th className="px-5 py-3 font-normal">Result</th>
+                    <th className="px-5 py-3">
+                      <span className="sr-only">Report</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {sessions.map((s, index) => {
                     const date = new Date(s.completedAt)
-                    const passed = s.rawScore >= 36
-                    const pct = Math.max(0, Math.round((s.rawScore / 60) * 100))
+                    const passed = s.rawScore >= TEST_PASS
                     return (
-                      <tr key={s.sessionId} className="border-t border-border bg-surface transition-colors hover:bg-surface-hover">
-                        <td className="px-4 py-3.5 font-semibold text-muted">{s.attemptNumber ?? sessions.length - index}</td>
-                        <td className="px-4 py-3.5">
-                          <div className="font-medium text-fg">
-                            {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <tr key={s.sessionId} className="border-t border-rule">
+                        <td className="figures px-5 py-3.5 text-graphite">#{s.attemptNumber ?? sessions.length - index}</td>
+                        <td className="px-5 py-3.5">
+                          <div className="text-ink">{formatDate(date)}</div>
+                          <div className="type-meta">{formatTime(date)}</div>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <div className="figures text-right">
+                            <span className="font-semibold text-ink">{s.rawScore}</span>
+                            <span className="text-graphite"> / {TEST_MAX}</span>
                           </div>
-                          <div className="text-xs text-muted">
-                            {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
+                          <ScoreBar score={s.rawScore} max={TEST_MAX} pass={TEST_PASS} className="ml-auto mt-1.5 w-36" />
                         </td>
-                        <td className="px-4 py-3.5">
-                          <span className="font-bold text-fg">{s.rawScore}</span>
-                          <span className="text-muted">/60</span>
-                          <span className="ml-1 text-xs text-muted">({pct}%)</span>
+                        <td className="px-5 py-3.5">
+                          <StatusPill tone={passed ? 'positive' : 'negative'}>{passed ? 'Passed' : 'Below'}</StatusPill>
                         </td>
-                        <td className="px-4 py-3.5">
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                              passed ? 'bg-success-subtle text-success-fg' : 'bg-danger-subtle text-danger-fg'
-                            }`}
-                          >
-                            {passed ? 'Pass' : 'Fail'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3.5 text-right">
-                          <button
-                            onClick={() => navigate(`/topics/${topicId}/tests/${s.sessionId}/report`)}
-                            className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-fg transition-colors hover:bg-surface-hover"
-                          >
-                            View Report
-                          </button>
+                        <td className="px-5 py-3.5 text-right">
+                          <Button size="sm" onClick={() => openReport(s.sessionId)}>
+                            View report
+                          </Button>
                         </td>
                       </tr>
                     )
@@ -146,48 +121,51 @@ export default function TestHistoryPage() {
               </table>
             </div>
 
-            {/* Mobile card list */}
-            <div className="flex flex-col gap-3 sm:hidden">
+            {/* Two-line rows on phones */}
+            <ul className="divide-y divide-rule rounded-lg border border-line bg-sheet sm:hidden">
               {sessions.map((s, index) => {
                 const date = new Date(s.completedAt)
-                const passed = s.rawScore >= 36
-                const pct = Math.max(0, Math.round((s.rawScore / 60) * 100))
+                const passed = s.rawScore >= TEST_PASS
                 return (
-                  <button
-                    key={s.sessionId}
-                    onClick={() => navigate(`/topics/${topicId}/tests/${s.sessionId}/report`)}
-                    className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:bg-surface-hover"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted">Test #{s.attemptNumber ?? sessions.length - index}</span>
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                          passed ? 'bg-success-subtle text-success-fg' : 'bg-danger-subtle text-danger-fg'
-                        }`}
-                      >
-                        {passed ? 'Pass' : 'Fail'}
+                  <li key={s.sessionId}>
+                    <button
+                      type="button"
+                      onClick={() => openReport(s.sessionId)}
+                      className="flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left hover:bg-wash"
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm text-ink">
+                          Attempt #{s.attemptNumber ?? sessions.length - index}
+                        </span>
+                        <span className="type-meta block">
+                          {formatDate(date)}, {formatTime(date)}
+                        </span>
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-bold text-fg">
-                          {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </p>
-                        <p className="text-xs text-muted">
-                          {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <p className="text-sm font-bold text-fg">
-                        {s.rawScore}/60 <span className="font-normal text-muted">({pct}%)</span>
-                      </p>
-                    </div>
-                  </button>
+                      <span className="flex shrink-0 flex-col items-end gap-1">
+                        <span className="figures text-sm">
+                          <span className="font-semibold text-ink">{s.rawScore}</span>
+                          <span className="text-graphite"> / {TEST_MAX}</span>
+                        </span>
+                        <StatusPill tone={passed ? 'positive' : 'negative'}>{passed ? 'Passed' : 'Below'}</StatusPill>
+                      </span>
+                    </button>
+                  </li>
                 )
               })}
-            </div>
+            </ul>
           </>
         )}
       </PageContainer>
     </div>
   )
+}
+
+/** "3 tests. Latest 50, best 50. 1 of 3 passed." The newest comes first in the list. */
+function summarise(sessions: testAPI.TestSessionListItem[]): string {
+  const latest = sessions[0].rawScore
+  const best = Math.max(...sessions.map((s) => s.rawScore))
+  const passed = sessions.filter((s) => s.rawScore >= TEST_PASS).length
+  const count = `${sessions.length} ${sessions.length === 1 ? 'test' : 'tests'}`
+  if (sessions.length === 1) return `${count}, scored ${latest} of ${TEST_MAX}.`
+  return `${count}. Latest ${latest}, best ${best}. ${passed} of ${sessions.length} cleared the pass mark of ${TEST_PASS}.`
 }

@@ -1,21 +1,21 @@
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { PROSE } from './ui/prose'
 
-interface StreamingMessageProps {
-  content: string
-}
-
-export default function StreamingMessage({ content }: StreamingMessageProps) {
+/** The reply while it streams in. Until the first token arrives it says so. */
+export default function StreamingMessage({ content }: { content: string }) {
   return (
-    <div className="flex justify-start" data-testid="chat-message-streaming" data-clarity-mask="True">
-      <div className="max-w-[80%] rounded-2xl rounded-bl-sm border border-border bg-surface px-4 py-3">
-        {content ? (
-          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-headings:my-2">
-            <ReactMarkdown>{content}</ReactMarkdown>
-          </div>
-        ) : (
-          <span className="text-sm italic text-muted">Thinking...</span>
-        )}
-      </div>
+    <div data-testid="chat-message-streaming" data-clarity-mask="True">
+      {content ? (
+        <div className={PROSE}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        </div>
+      ) : (
+        <p className="flex items-center gap-1.5 text-[15px] text-graphite">
+          Thinking…
+          <span aria-hidden className="animate-caret inline-block h-4 w-[2px] bg-ballpoint" />
+        </p>
+      )}
     </div>
   )
 }

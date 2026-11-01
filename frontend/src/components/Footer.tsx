@@ -2,14 +2,14 @@ const PORTFOLIO_URL = 'https://siddarth-ba-72.vercel.app/'
 
 export default function Footer() {
   return (
-    <footer className="border-t border-border bg-surface">
-      <p className="mx-auto w-full max-w-[1400px] px-4 py-5 text-center text-sm text-muted sm:px-6 lg:px-8">
-        Built by{' '}
+    <footer className="border-t border-line">
+      <p className="mx-auto flex h-12 w-full max-w-[1200px] items-center px-4 text-[13px] text-graphite sm:px-6 lg:px-8">
+        Built by&nbsp;
         <a
           href={PORTFOLIO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-semibold text-fg underline underline-offset-4 transition-colors hover:text-primary"
+          className="font-medium text-ink underline underline-offset-4 hover:text-ballpoint"
         >
           Siddarth Ambannavar
         </a>

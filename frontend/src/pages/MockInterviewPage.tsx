@@ -1,24 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import {
-  ArrowRight,
-  ChevronDown,
-  Clock,
-  CornerDownLeft,
-  Flag,
-  History,
-  Loader2,
-  MessageSquareText,
-  Sparkles,
-} from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowRight, ChevronDown, Flag } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import type { RootState } from '../store'
 import AppHeader from '../components/AppHeader'
-import PageContainer from '../components/PageContainer'
+import TopicHeader, { useTopicName } from '../components/TopicHeader'
+import PageContainer, { WIDTH } from '../components/PageContainer'
 import RatingBadge from '../components/RatingBadge'
+import { Button } from '../components/ui/Button'
+import { textareaClass } from '../components/ui/field'
+import Notice from '../components/ui/Notice'
+import Spinner from '../components/ui/Spinner'
+import StatusPill from '../components/ui/StatusPill'
 import * as interviewAPI from '../api/interviews'
-import type { Difficulty, ExperienceLevel, InterviewConfig } from '../api/interviews'
+import type { InterviewConfig } from '../api/interviews'
 import { trackEvent } from '../features/analytics/clarity'
+import {
+  DIFFICULTIES,
+  DURATIONS,
+  EXPERIENCE_LEVELS,
+  INTERVIEW_MAX,
+  INTERVIEW_PASS,
+  configLabel,
+} from '../features/interviews/labels'
 import {
   advanceToNextQuestion,
   interviewEnding,
@@ -30,23 +34,6 @@ import {
   interviewReset,
   storeInterviewReport,
 } from '../features/interviews/interviewSlice'
-
-const EXPERIENCE_LEVELS: Array<{ value: ExperienceLevel; label: string; years: string }> = [
-  { value: 'STUDENT', label: 'Student', years: 'Still in college' },
-  { value: 'JUNIOR', label: 'Junior', years: '0-2 years' },
-  { value: 'INTERMEDIATE', label: 'Intermediate', years: '2-5 years' },
-  { value: 'SENIOR', label: 'Senior', years: '5-8 years' },
-  { value: 'MASTER', label: 'Master', years: '8-13 years' },
-  { value: 'ADVANCED', label: 'Advanced', years: '13+ years' },
-]
-
-const DIFFICULTIES: Array<{ value: Difficulty; label: string; hint: string }> = [
-  { value: 'EASY', label: 'Easy', hint: 'Warm-up pace' },
-  { value: 'MEDIUM', label: 'Medium', hint: 'Realistic bar' },
-  { value: 'HARD', label: 'Hard', hint: 'Pushes hard' },
-]
-
-const DURATIONS = [30, 45, 60]
 
 function formatCountdown(totalSeconds: number): string {
   const clamped = Math.max(0, totalSeconds)
@@ -66,6 +53,7 @@ export default function MockInterviewPage() {
   const { topicId = '' } = useParams<{ topicId: string }>()
 
   const session = useAppSelector((state: RootState) => state.interviews.activeSessionByTopicId[topicId])
+  const topicName = useTopicName(topicId)
   // A college student (per their onboarding answers) only picks the duration; the backend
   // enforces the student level too.
   const profileIsStudent = useAppSelector((state: RootState) => state.auth.user?.experienceLevel === 'STUDENT')
@@ -280,162 +268,116 @@ export default function MockInterviewPage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-bg text-fg">
-        <AppHeader
-          onBack={() => navigate('/dashboard')}
-          title="Mock Interview"
-          subtitle="Setup"
-          actions={
-            <button
-              onClick={() => navigate(`/topics/${topicId}/interviews/history`)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-            >
-              <History size={15} />
-              <span className="hidden sm:inline">
-                Past interviews{pastInterviewCount > 0 ? ` (${pastInterviewCount})` : ''}
-              </span>
-            </button>
-          }
-        />
-        <PageContainer maxWidth="max-w-3xl">
-          <div className="flex flex-col gap-6">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Choose your interview setup</h1>
-              <p className="mt-1 text-sm text-muted">
-                {profileIsStudent
-                  ? 'One question at a time, on a hard clock. Questions are pitched for college students, so just pick how long you want to practise.'
-                  : 'One question at a time, on a hard clock. The bar for a strong answer is calibrated to the experience level you pick.'}
-              </p>
-            </div>
+      <div className="min-h-screen">
+        <AppHeader />
+        <TopicHeader topicId={topicId} active="interview" />
+        <PageContainer maxWidth={WIDTH.topic} className="flex flex-col gap-6">
+          <div>
+            <h2 className="type-section text-lg">Choose your interview setup</h2>
+            <p className="type-body mt-1 max-w-2xl text-graphite">
+              {profileIsStudent
+                ? 'One question at a time, on a clock that does not pause. Questions are pitched for college students, so you only pick how long it runs.'
+                : 'One question at a time, on a clock that does not pause. The bar for a strong answer follows the experience level you pick.'}
+              {pastInterviewCount > 0 && (
+                <>
+                  {' '}
+                  <Link
+                    to={`/topics/${topicId}/interviews/history`}
+                    className="text-ink underline decoration-edge underline-offset-4 hover:decoration-ink"
+                  >
+                    {pastInterviewCount} past {pastInterviewCount === 1 ? 'interview' : 'interviews'}
+                  </Link>
+                </>
+              )}
+            </p>
+          </div>
 
-            {error && (
-              <div className="rounded-xl border border-danger/30 bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-fg">
-                {error}
-              </div>
-            )}
+          {error && <Notice>{error}</Notice>}
 
-            {resumableSessionId && (
-              <div className="flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-bold text-fg">You have an interview in progress</p>
-                  <p className="mt-0.5 text-sm text-muted">
-                    Its clock has been running the whole time. Pick up where you left off.
-                  </p>
-                </div>
-                <button
-                  onClick={handleResume}
-                  disabled={busy}
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover disabled:opacity-60"
-                >
-                  {busy ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-                  Resume interview
-                </button>
-              </div>
-            )}
-
-            <fieldset disabled={busy} className="flex flex-col gap-6">
+          {resumableSessionId && (
+            <div className="flex flex-col gap-3 rounded-lg border border-ink bg-sheet p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <legend className="text-sm font-bold text-fg">Experience level</legend>
-                <p className="mb-3 text-xs text-muted">
-                  {profileIsStudent
-                    ? 'Set from your profile: college student. You can change this from Profile on the dashboard.'
-                    : 'Sets how much depth an answer needs to count as strong.'}
-                </p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {EXPERIENCE_LEVELS.map((level) => {
-                    const selected = config.experienceLevel === level.value
-                    return (
-                      <button
-                        key={level.value}
-                        type="button"
-                        disabled={profileIsStudent}
-                        onClick={() =>
-                          setConfig((current) => ({
-                            ...current,
-                            experienceLevel: level.value,
-                            difficulty: level.value === 'STUDENT' ? 'EASY' : current.difficulty,
-                          }))
-                        }
-                        className={`rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                          selected
-                            ? 'border-primary bg-primary-subtle'
-                            : 'border-border bg-surface hover:bg-surface-hover'
-                        }`}
-                      >
-                        <span className="block text-sm font-bold text-fg">{level.label}</span>
-                        <span className="mt-0.5 block text-xs text-muted">{level.years}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+                <p className="text-sm font-medium text-ink">You have an interview in progress</p>
+                <p className="type-body mt-0.5 text-graphite">Its clock has kept running. Pick up where you left off.</p>
               </div>
+              <Button variant="primary" onClick={handleResume} disabled={busy}>
+                {busy ? <Spinner size={14} className="text-action-ink" /> : <ArrowRight size={16} aria-hidden />}
+                Resume interview
+              </Button>
+            </div>
+          )}
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div>
-                  <legend className="text-sm font-bold text-fg">Difficulty</legend>
-                  <p className="mb-3 text-xs text-muted">
-                    {isStudent
-                      ? 'Set for students: mostly easy questions, with about one in five at medium.'
-                      : 'Baseline complexity and how fast follow-ups escalate.'}
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {DIFFICULTIES.map((option) => {
-                      const selected = config.difficulty === option.value
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          disabled={isStudent}
-                          onClick={() => setConfig((current) => ({ ...current, difficulty: option.value }))}
-                          className={`rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                            selected
-                              ? 'border-primary bg-primary-subtle'
-                              : 'border-border bg-surface hover:bg-surface-hover'
-                          }`}
-                        >
-                          <span className="block text-sm font-bold text-fg">{option.label}</span>
-                          <span className="mt-0.5 block text-xs text-muted">{option.hint}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <legend className="text-sm font-bold text-fg">Duration</legend>
-                  <p className="mb-3 text-xs text-muted">A hard wall-clock window. The clock does not pause.</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {DURATIONS.map((minutes) => {
-                      const selected = config.durationMinutes === minutes
-                      return (
-                        <button
-                          key={minutes}
-                          type="button"
-                          onClick={() => setConfig((current) => ({ ...current, durationMinutes: minutes }))}
-                          className={`rounded-xl border p-3 text-center transition-colors ${
-                            selected
-                              ? 'border-primary bg-primary-subtle'
-                              : 'border-border bg-surface hover:bg-surface-hover'
-                          }`}
-                        >
-                          <span className="block text-sm font-bold text-fg">{minutes}</span>
-                          <span className="mt-0.5 block text-xs text-muted">minutes</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            </fieldset>
-
-            <button
-              onClick={handleStart}
-              disabled={busy || checkingForResume}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+          <fieldset disabled={busy} className="divide-y divide-rule rounded-lg border border-line bg-sheet">
+            <SetupRow
+              title="Experience level"
+              note={
+                profileIsStudent
+                  ? 'Set from your profile: college student. Change it in Profile.'
+                  : 'How much depth an answer needs to count as strong.'
+              }
             >
-              {busy ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {EXPERIENCE_LEVELS.map((level) => (
+                  <Choice
+                    key={level.value}
+                    selected={config.experienceLevel === level.value}
+                    disabled={profileIsStudent}
+                    onClick={() =>
+                      setConfig((current) => ({
+                        ...current,
+                        experienceLevel: level.value,
+                        difficulty: level.value === 'STUDENT' ? 'EASY' : current.difficulty,
+                      }))
+                    }
+                    label={level.label}
+                    hint={level.years}
+                  />
+                ))}
+              </div>
+            </SetupRow>
+
+            <SetupRow
+              title="Difficulty"
+              note={
+                isStudent
+                  ? 'Set for students: mostly easy questions, about one in five at medium.'
+                  : 'The starting complexity, and how fast follow-ups escalate.'
+              }
+            >
+              <div className="grid grid-cols-3 gap-2">
+                {DIFFICULTIES.map((option) => (
+                  <Choice
+                    key={option.value}
+                    selected={config.difficulty === option.value}
+                    disabled={isStudent}
+                    onClick={() => setConfig((current) => ({ ...current, difficulty: option.value }))}
+                    label={option.label}
+                    hint={option.hint}
+                  />
+                ))}
+              </div>
+            </SetupRow>
+
+            <SetupRow title="Duration" note="A fixed window on the wall clock. It keeps running if you leave.">
+              <div className="grid grid-cols-3 gap-2">
+                {DURATIONS.map((minutes) => (
+                  <Choice
+                    key={minutes}
+                    selected={config.durationMinutes === minutes}
+                    onClick={() => setConfig((current) => ({ ...current, durationMinutes: minutes }))}
+                    label={`${minutes} min`}
+                  />
+                ))}
+              </div>
+            </SetupRow>
+          </fieldset>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="figures type-body text-graphite">{configLabel(config)}. Pass mark {INTERVIEW_PASS} of {INTERVIEW_MAX}.</p>
+            <Button variant="primary" size="lg" onClick={handleStart} disabled={busy || checkingForResume}>
+              {busy && <Spinner size={14} className="text-action-ink" />}
               {busy ? 'Preparing your interview…' : resumableSessionId ? 'Start a new interview' : 'Start interview'}
-            </button>
+            </Button>
           </div>
         </PageContainer>
       </div>
@@ -445,19 +387,20 @@ export default function MockInterviewPage() {
   // ---------------------------------------------------------------- render: preparing / finalizing
 
   if (phase === 'starting' || phase === 'ending' || phase === 'completed') {
-    const message =
-      phase === 'starting'
-        ? 'Planning your interview and writing the first question…'
-        : 'Scoring your answers and writing your report…'
     return (
-      <div className="min-h-screen bg-bg text-fg">
-        <AppHeader title="Mock Interview" subtitle={phase === 'starting' ? 'Preparing' : 'Wrapping up'} />
-        <PageContainer maxWidth="max-w-3xl">
-          <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-surface p-12 text-center">
-            <Loader2 size={28} className="animate-spin text-primary" />
-            <p className="text-sm font-semibold text-fg">{message}</p>
-            <p className="text-xs text-muted">This usually takes a few seconds.</p>
-            {error && <p className="text-sm font-medium text-danger-fg">{error}</p>}
+      <div className="min-h-screen">
+        <AppHeader />
+        <TopicHeader topicId={topicId} active="interview" />
+        <PageContainer maxWidth={WIDTH.topic}>
+          <div className="rounded-lg border border-line bg-sheet px-5 py-6">
+            <p className="flex items-center gap-2.5 text-sm font-medium text-ink">
+              <Spinner />
+              {phase === 'starting'
+                ? 'Planning your interview and writing the first question…'
+                : 'Scoring your answers and writing your report…'}
+            </p>
+            <p className="type-body mt-1 pl-[26px] text-graphite">This usually takes a few seconds.</p>
+            {error && <Notice className="mt-4">{error}</Notice>}
           </div>
         </PageContainer>
       </div>
@@ -470,195 +413,219 @@ export default function MockInterviewPage() {
   const themeProgress = session.themeProgress
 
   return (
-    <div className="min-h-screen bg-bg text-fg">
-      <AppHeader
-        onBack={() => navigate('/dashboard')}
-        title="Mock Interview"
-        subtitle={session.config ? `${session.config.experienceLevel} · ${session.config.difficulty}` : undefined}
-      />
+    <div className="min-h-screen">
+      <AppHeader />
 
-      {/* Timer bar - the one thing that must always be visible */}
-      <div className="sticky top-16 z-10 border-b border-border bg-surface/85 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-mono text-sm font-bold tabular-nums ${
-                isLowTime ? 'bg-danger-subtle text-danger-fg' : 'bg-surface-hover text-fg'
-              }`}
-            >
-              <Clock size={14} />
-              {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '--:--'}
-            </span>
-            {themeProgress && themeProgress.totalThemes > 0 && (
-              <span className="truncate text-xs font-medium text-muted">
-                Theme {themeProgress.currentThemeIndex} of ~{themeProgress.totalThemes}
-              </span>
-            )}
+      {/* The clock is the one thing that must always be visible */}
+      <div className="sticky top-[53px] z-20 border-b border-line bg-paper">
+        <div className={`mx-auto flex w-full ${WIDTH.topic} items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8`}>
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-medium text-ink">
+              Mock interview{topicName && <span className="font-normal text-graphite"> · {topicName}</span>}
+            </h1>
+            <p className="type-meta truncate">
+              {session.config ? configLabel(session.config) : null}
+              {themeProgress && themeProgress.totalThemes > 0 && (
+                <>
+                  {session.config ? ' · ' : ''}Theme {themeProgress.currentThemeIndex} of about {themeProgress.totalThemes}
+                </>
+              )}
+            </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-3">
+            <p
+              aria-label="Time left"
+              className={`figures text-2xl font-semibold tracking-[-0.01em] ${isLowTime ? 'text-redpen' : 'text-ink'}`}
+            >
+              {remainingSeconds !== null ? formatCountdown(remainingSeconds) : '–:––'}
+            </p>
             {confirmingEnd ? (
-              <>
-                <span className="hidden text-xs font-medium text-muted sm:inline">End and get your report?</span>
-                <button
-                  onClick={handleEndEarly}
-                  className="rounded-lg bg-danger px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
-                >
+              <span className="flex items-center gap-1.5">
+                <span className="hidden text-[13px] text-graphite sm:inline">End and get your report?</span>
+                <Button size="sm" variant="danger" onClick={handleEndEarly}>
                   Yes, end it
-                </button>
-                <button
-                  onClick={() => setConfirmingEnd(false)}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:bg-surface-hover"
-                >
+                </Button>
+                <Button size="sm" variant="quiet" onClick={() => setConfirmingEnd(false)}>
                   Cancel
-                </button>
-              </>
+                </Button>
+              </span>
             ) : (
-              <button
-                onClick={() => setConfirmingEnd(true)}
-                disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg disabled:opacity-50"
-              >
-                <Flag size={13} />
+              <Button size="sm" onClick={() => setConfirmingEnd(true)} disabled={busy}>
+                <Flag size={14} aria-hidden />
                 End interview
-              </button>
+              </Button>
             )}
           </div>
         </div>
-        <div className="h-0.5 w-full bg-border">
+        <div className="h-0.5 w-full bg-rule" aria-hidden>
           <div
-            className={`h-full transition-all duration-1000 ease-linear ${isLowTime ? 'bg-danger' : 'bg-primary'}`}
-            style={{ width: `${elapsedFraction * 100}%` }}
+            className={`h-full origin-left transition-transform duration-1000 ease-linear ${isLowTime ? 'bg-redpen' : 'bg-ballpoint'}`}
+            style={{ transform: `scaleX(${elapsedFraction})` }}
           />
         </div>
       </div>
 
-      <PageContainer mask maxWidth="max-w-3xl">
-        <div className="flex flex-col gap-4">
-          {error && (
-            <div className="rounded-xl border border-danger/30 bg-danger-subtle px-4 py-3 text-sm font-medium text-danger-fg">
-              {error}
-            </div>
-          )}
+      <PageContainer mask maxWidth={WIDTH.topic} className="flex flex-col gap-5">
+        {error && <Notice>{error}</Notice>}
 
-          {/* Transcript of everything answered so far */}
-          {session.exchanges.length > 0 && (
-            <div className="rounded-2xl border border-border bg-surface">
-              <button
-                onClick={() => setTranscriptOpen((open) => !open)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-              >
-                <span className="inline-flex items-center gap-2 text-sm font-bold text-fg">
-                  <MessageSquareText size={15} className="text-muted" />
-                  Transcript
-                  <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-semibold text-muted">
-                    {session.exchanges.length} answered
-                  </span>
+        {/* Feedback on the answer just submitted */}
+        {phase === 'feedback' && session.pendingFeedback && (
+          <section className="rounded-lg border border-line bg-sheet p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="type-section">Feedback on your answer</h2>
+              <RatingBadge rating={session.pendingFeedback.rating} />
+            </div>
+            <p className="type-body mt-2 max-w-[68ch] text-ink">{session.pendingFeedback.feedback}</p>
+            <Button
+              variant="primary"
+              className="mt-4"
+              onClick={() => dispatch(advanceToNextQuestion({ topicId }))}
+              disabled={!session.pendingQuestion}
+            >
+              Next question
+              <ArrowRight size={16} aria-hidden />
+            </Button>
+          </section>
+        )}
+
+        {phase === 'evaluating' && (
+          <div className="flex items-center gap-2.5 rounded-lg border border-line bg-sheet px-5 py-4">
+            <Spinner />
+            <p className="text-sm text-ink">Reading your answer and preparing the next question…</p>
+          </div>
+        )}
+
+        {/* Current question and the answer box */}
+        {phase === 'active' && question && (
+          <section className="flex flex-col gap-4">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="type-label">{question.theme}</span>
+                {question.isFollowUp && <StatusPill tone="accent">Follow-up</StatusPill>}
+              </div>
+              <p className="type-question mt-2 max-w-[60ch] text-[22px] leading-[1.45] text-ink" data-testid="interview-question">
+                {question.question}
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="interview-answer" className="sr-only">
+                Your answer
+              </label>
+              <textarea
+                id="interview-answer"
+                ref={textareaRef}
+                autoFocus
+                className={`${textareaClass} min-h-48 resize-y text-[15px] sm:text-[15px]`}
+                placeholder="Answer as you would out loud in a real interview…"
+                value={answer}
+                onChange={(event) => setAnswer(event.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={busy}
+              />
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <span className="figures type-meta">
+                  {words} {words === 1 ? 'word' : 'words'}
+                  <span className="hidden sm:inline"> · ⌘ or Ctrl + Enter to submit</span>
                 </span>
-                <ChevronDown
-                  size={16}
-                  className={`shrink-0 text-muted transition-transform ${transcriptOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {transcriptOpen && (
-                <div className="flex flex-col gap-3 border-t border-border p-4">
-                  {session.exchanges.map((exchange) => (
-                    <div key={exchange.index} className="rounded-xl border border-border p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-muted">{exchange.theme}</p>
-                        <RatingBadge rating={exchange.rating} size="sm" />
-                      </div>
-                      <p className="mt-1.5 text-sm font-semibold text-fg">{exchange.question}</p>
-                      <p className="mt-1.5 whitespace-pre-wrap text-sm text-muted">
-                        {exchange.userAnswer || '(no answer given)'}
+                <Button variant="primary" size="lg" onClick={() => void submitAnswer(answer)} disabled={busy || !answer.trim()}>
+                  {busy && <Spinner size={14} className="text-action-ink" />}
+                  Submit answer
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Everything answered so far */}
+        {session.exchanges.length > 0 && (
+          <section className="rounded-lg border border-line bg-sheet">
+            <button
+              type="button"
+              onClick={() => setTranscriptOpen((open) => !open)}
+              aria-expanded={transcriptOpen}
+              className="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left"
+            >
+              <span className="flex items-baseline gap-2">
+                <span className="text-sm font-medium text-ink">Transcript</span>
+                <span className="figures type-meta">{session.exchanges.length} answered</span>
+              </span>
+              <ChevronDown
+                size={16}
+                aria-hidden
+                className={`shrink-0 text-graphite transition-transform duration-150 ${transcriptOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {transcriptOpen && (
+              <ol className="divide-y divide-rule border-t border-line">
+                {session.exchanges.map((exchange) => (
+                  <li key={exchange.index} className="px-5 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="type-label">
+                        {exchange.theme}
+                        {exchange.isFollowUp && ' · follow-up'}
                       </p>
-                      {exchange.feedback && (
-                        <p className="mt-2 border-t border-border pt-2 text-sm italic text-muted">{exchange.feedback}</p>
-                      )}
+                      <RatingBadge rating={exchange.rating} />
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Feedback on the answer just submitted */}
-          {phase === 'feedback' && session.pendingFeedback && (
-            <div className="rounded-2xl border border-border bg-surface p-5">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-bold text-fg">Feedback on your answer</h2>
-                <RatingBadge rating={session.pendingFeedback.rating} />
-              </div>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{session.pendingFeedback.feedback}</p>
-              <button
-                onClick={() => dispatch(advanceToNextQuestion({ topicId }))}
-                disabled={!session.pendingQuestion}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:opacity-60"
-              >
-                Next question
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          )}
-
-          {phase === 'evaluating' && (
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-5">
-              <Loader2 size={18} className="animate-spin text-primary" />
-              <p className="text-sm font-semibold text-fg">Reading your answer and preparing the next question…</p>
-            </div>
-          )}
-
-          {/* Current question + answer box */}
-          {phase === 'active' && question && (
-            <>
-              <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-surface-hover px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-muted">
-                    {question.theme}
-                  </span>
-                  {question.isFollowUp && (
-                    <span className="rounded-full border border-accent/30 bg-primary-subtle px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-fg">
-                      Follow-up
-                    </span>
-                  )}
-                </div>
-                <p className="mt-3 text-lg font-semibold leading-relaxed text-fg" data-testid="interview-question">
-                  {question.question}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-surface p-4">
-                <textarea
-                  ref={textareaRef}
-                  autoFocus
-                  className="min-h-40 w-full resize-y rounded-xl border border-border bg-bg px-3 py-2.5 text-sm leading-relaxed text-fg outline-none transition-colors placeholder:text-muted focus:border-primary"
-                  placeholder="Answer as you would out loud in a real interview…"
-                  value={answer}
-                  onChange={(event) => setAnswer(event.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={busy}
-                />
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-xs text-muted">
-                    {words} word{words === 1 ? '' : 's'}
-                    <span className="ml-2 hidden items-center gap-1 sm:inline-flex">
-                      · <CornerDownLeft size={11} /> Cmd/Ctrl + Enter to submit
-                    </span>
-                  </span>
-                  <button
-                    onClick={() => void submitAnswer(answer)}
-                    disabled={busy || !answer.trim()}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {busy && <Loader2 size={15} className="animate-spin" />}
-                    Submit answer
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+                    <p className="type-question mt-1.5 text-base text-ink">{exchange.question}</p>
+                    <p className="type-body mt-2 whitespace-pre-wrap text-graphite">
+                      {exchange.userAnswer || 'No answer given.'}
+                    </p>
+                    {exchange.feedback && (
+                      <p className="type-body mt-2 border-l-2 border-edge pl-3 text-ink">{exchange.feedback}</p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        )}
       </PageContainer>
     </div>
+  )
+}
+
+function SetupRow({ title, note, children }: { title: string; note: string; children: React.ReactNode }) {
+  return (
+    <div role="group" aria-label={title} className="grid gap-3 p-5 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
+      <div>
+        <h3 className="text-sm font-medium text-ink">{title}</h3>
+        <p className="type-meta mt-0.5 text-pretty">{note}</p>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/** One option in a setup group. Selection is an ink outline; disabled options stay readable. */
+function Choice({
+  selected,
+  disabled = false,
+  onClick,
+  label,
+  hint,
+}: {
+  selected: boolean
+  disabled?: boolean
+  onClick: () => void
+  label: string
+  hint?: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      disabled={disabled}
+      onClick={onClick}
+      className={`rounded-md border px-3 py-2.5 text-left transition-[border-color,background-color,transform] duration-150 active:scale-[0.98] disabled:cursor-not-allowed ${
+        selected
+          ? 'border-ink bg-sheet ring-1 ring-ink'
+          : 'border-line bg-sheet hover:border-edge hover:bg-wash disabled:text-graphite disabled:hover:border-line disabled:hover:bg-sheet'
+      }`}
+    >
+      <span className={`block text-sm font-medium ${selected ? 'text-ink' : disabled ? 'text-graphite' : 'text-ink'}`}>{label}</span>
+      {hint && <span className="type-meta block">{hint}</span>}
+    </button>
   )
 }

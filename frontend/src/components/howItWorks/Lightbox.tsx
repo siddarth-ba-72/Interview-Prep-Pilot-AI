@@ -57,7 +57,7 @@ export default function Lightbox({
   }, [index, count, onIndexChange, onClose])
 
   const navButton =
-    'absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white shadow-lg ring-1 ring-white/20 backdrop-blur-md transition-colors hover:bg-black/80'
+    'absolute top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-black/70 text-white ring-1 ring-white/20 transition-colors hover:bg-black'
 
   return (
     <div
@@ -66,10 +66,10 @@ export default function Lightbox({
       aria-modal="true"
       aria-label={`Screenshot ${index + 1} of ${count}: ${scene.title}`}
       onClick={onClose}
-      className="fixed inset-0 z-50 flex flex-col items-center gap-4 bg-black/85 p-4 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-50 flex flex-col items-center gap-4 bg-black/90 p-4 sm:p-6"
     >
       <div className="flex w-full max-w-6xl items-center justify-between">
-        <span className="text-sm font-semibold text-white/70">
+        <span className="figures text-sm text-white/70">
           {index + 1} / {count}
         </span>
         <button
@@ -77,7 +77,7 @@ export default function Lightbox({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25"
+          className="flex h-10 w-10 items-center justify-center rounded-md bg-white/10 text-white transition-colors hover:bg-white/25"
         >
           <X size={20} />
         </button>
@@ -89,7 +89,7 @@ export default function Lightbox({
           src={shotUrl(scene.shot, theme)}
           alt={`Screenshot: ${scene.title}`}
           onClick={(e) => e.stopPropagation()}
-          className="animate-modal-pop max-h-full max-w-full rounded-xl object-contain shadow-2xl ring-1 ring-white/10"
+          className="animate-dialog-in max-h-full max-w-full rounded-lg object-contain ring-1 ring-white/10"
         />
         {count > 1 && (
           <>
@@ -120,7 +120,7 @@ export default function Lightbox({
       </div>
 
       <div className="max-w-2xl text-center" onClick={(e) => e.stopPropagation()}>
-        <p className="text-base font-bold text-white">{scene.title}</p>
+        <p className="text-base font-medium text-white">{scene.title}</p>
         <p className="mt-1 text-sm leading-relaxed text-white/70">{scene.body}</p>
       </div>
     </div>

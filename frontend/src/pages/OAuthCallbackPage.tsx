@@ -4,6 +4,7 @@ import { useAppDispatch } from '../hooks'
 import { setCredentials } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
 import AuthShell from '../components/AuthShell'
+import Spinner from '../components/ui/Spinner'
 
 /**
  * After Google OAuth, the backend redirects here with the access token
@@ -39,11 +40,11 @@ export default function OAuthCallbackPage() {
   }, [dispatch, navigate])
 
   return (
-    <AuthShell title="Signing you in...">
-      <div className="flex items-center gap-3 text-sm text-muted">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />
-        Verifying your Google account
-      </div>
+    <AuthShell title="Signing you in…">
+      <p className="flex items-center gap-2.5 text-sm text-graphite">
+        <Spinner />
+        Checking your Google account
+      </p>
     </AuthShell>
   )
 }

@@ -1,15 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import AppHeader from '../components/AppHeader'
 import PageContainer from '../components/PageContainer'
-import { SessionTile, StatTile } from '../components/AdminStats'
+import { KpiStrip, SessionCountsText, sessionKpi } from '../components/AdminStats'
+import EmptyState from '../components/ui/EmptyState'
+import Notice from '../components/ui/Notice'
+import StatusPill from '../components/ui/StatusPill'
 import { getAdminUser, getUserActivity } from '../api/admin'
 import type { AdminUser, SessionCounts } from '../api/admin'
 import { experienceLabel, formatDate, providerLabel } from '../features/admin/format'
 
 export default function AdminUserPage() {
   const { userId = '' } = useParams<{ userId: string }>()
-  const navigate = useNavigate()
 
   const userQuery = useQuery({ queryKey: ['admin', 'user', userId], queryFn: () => getAdminUser(userId) })
   const activityQuery = useQuery({ queryKey: ['admin', 'userActivity', userId], queryFn: () => getUserActivity(userId) })
@@ -19,59 +21,52 @@ export default function AdminUserPage() {
   const notFound = (userQuery.error as { response?: { status?: number } } | null)?.response?.status === 404
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader
-        onBack={() => navigate('/admin')}
-        title={user ? user.displayName || user.email : 'User'}
-        subtitle="Admin · Read-only"
-      />
+    <div className="min-h-screen">
+      <AppHeader />
 
-      <PageContainer mask maxWidth="max-w-5xl" className="flex flex-col gap-7">
-        {userQuery.isLoading && <p className="text-sm text-muted">Loading user…</p>}
-        {userQuery.isError && (
-          <p className="text-sm font-medium text-danger">{notFound ? 'User not found.' : 'Could not load this user.'}</p>
-        )}
-        {user && <ProfileCard user={user} />}
+      <PageContainer mask maxWidth="max-w-5xl" className="flex flex-col gap-6">
+        <div>
+          <Link to="/admin" className="type-meta text-graphite no-underline hover:text-ink hover:underline">
+            Admin · Users
+          </Link>
+          {userQuery.isLoading && <div className="mt-1 h-7 w-56 rounded bg-press" aria-label="Loading user" />}
+          {user && <ProfileHeading user={user} />}
+          {userQuery.isError && (
+            <Notice className="mt-3">{notFound ? 'User not found.' : 'Could not load this user.'}</Notice>
+          )}
+        </div>
+
+        {user && <ProfileFields user={user} />}
 
         {!notFound && (
-          <section aria-label="Activity" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <StatTile label="Topics" value={activity?.topics.length} />
-            <SessionTile label="Tests" counts={activity?.tests} />
-            <SessionTile label="Mock interviews" counts={activity?.interviews} />
+          <section aria-label="Activity">
+            <KpiStrip
+              items={[
+                { label: 'Topics', value: activity?.topics.length },
+                sessionKpi('Tests', activity?.tests),
+                sessionKpi('Mock interviews', activity?.interviews),
+              ]}
+            />
           </section>
         )}
 
-        {activityQuery.isError && !notFound && (
-          <p className="text-sm font-medium text-danger">Could not load topics and session counts.</p>
-        )}
+        {activityQuery.isError && !notFound && <Notice>Could not load topics and session counts.</Notice>}
 
         {activity && (
-          <section aria-label="Topics" className="flex flex-col gap-4">
-            <h2 className="text-lg font-extrabold tracking-tight text-fg">Topics</h2>
+          <section aria-labelledby="topics-title" className="flex flex-col gap-3">
+            <h2 id="topics-title" className="type-section">
+              Topics
+            </h2>
             {activity.topics.length === 0 && !activity.deletedTopics ? (
-              <div className="rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-12 text-center">
-                <p className="text-sm font-medium text-muted">No topics yet.</p>
-              </div>
+              <EmptyState>No topics yet.</EmptyState>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-border">
-                <table className="w-full min-w-[560px] text-left text-sm">
+              <div className="overflow-x-auto rounded-lg border border-line bg-sheet">
+                <table className="w-full min-w-[520px] text-left text-sm">
                   <thead>
-                    <tr className="bg-surface-hover text-xs font-semibold uppercase tracking-wide text-muted">
-                      <th rowSpan={2} className="px-4 py-3 align-bottom">
-                        Topic
-                      </th>
-                      <th colSpan={2} className="border-l border-border px-4 pb-1 pt-3 text-center">
-                        Tests
-                      </th>
-                      <th colSpan={2} className="border-l border-border px-4 pb-1 pt-3 text-center">
-                        Mock interviews
-                      </th>
-                    </tr>
-                    <tr className="bg-surface-hover text-[11px] font-semibold uppercase tracking-wide text-muted">
-                      <th className="border-l border-border px-4 pb-3 pt-1 text-right">Active</th>
-                      <th className="px-4 pb-3 pt-1 text-right">Completed</th>
-                      <th className="border-l border-border px-4 pb-3 pt-1 text-right">Active</th>
-                      <th className="px-4 pb-3 pt-1 text-right">Completed</th>
+                    <tr className="text-xs text-graphite">
+                      <th className="px-5 py-3 font-normal">Topic</th>
+                      <th className="px-5 py-3 text-right font-normal">Tests</th>
+                      <th className="px-5 py-3 text-right font-normal">Mock interviews</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -97,42 +92,34 @@ export default function AdminUserPage() {
   )
 }
 
-function ProfileCard({ user }: { user: AdminUser }) {
-  const initial = (user.displayName || user.email).charAt(0).toUpperCase()
+function ProfileHeading({ user }: { user: AdminUser }) {
   return (
-    <section aria-label="Profile" className="rounded-2xl border border-border bg-surface p-5">
-      <div className="flex items-center gap-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-lg font-extrabold text-primary">
-          {initial}
-        </span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-xl font-extrabold tracking-tight text-fg">{user.displayName || user.email}</h1>
-            {user.role === 'ADMIN' && (
-              <span className="rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
-                Admin
-              </span>
-            )}
-          </div>
-          <p className="truncate text-sm text-muted">{user.email}</p>
-        </div>
+    <div className="mt-0.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="type-title truncate">{user.displayName || user.email}</h1>
+        {user.role === 'ADMIN' && <StatusPill tone="neutral">Admin</StatusPill>}
       </div>
-      <dl className="mt-5 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-        <ProfileField label="Experience" value={experienceLabel(user.experienceLevel)} />
-        <ProfileField label="Domain" value={user.preferredDomain || 'Not answered'} />
-        <ProfileField label="Sign-in" value={providerLabel(user.authProvider)} />
-        <ProfileField label="Joined" value={formatDate(user.createdAt)} />
-      </dl>
-    </section>
+      <p className="type-body truncate text-graphite">{user.email}</p>
+    </div>
   )
 }
 
-function ProfileField({ label, value }: { label: string; value: string }) {
+function ProfileFields({ user }: { user: AdminUser }) {
+  const fields = [
+    { label: 'Experience', value: experienceLabel(user.experienceLevel) },
+    { label: 'Domain', value: user.preferredDomain || 'Not answered' },
+    { label: 'Sign-in', value: providerLabel(user.authProvider) },
+    { label: 'Joined', value: formatDate(user.createdAt) },
+  ]
   return (
-    <div className="min-w-0">
-      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</dt>
-      <dd className="mt-0.5 truncate font-medium text-fg">{value}</dd>
-    </div>
+    <dl aria-label="Profile" className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-lg border border-line bg-sheet px-5 py-4 sm:grid-cols-4">
+      {fields.map((field) => (
+        <div key={field.label} className="min-w-0">
+          <dt className="type-label">{field.label}</dt>
+          <dd className="mt-0.5 truncate text-sm text-ink">{field.value}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }
 
@@ -147,19 +134,15 @@ function TopicRow({
   interviews: SessionCounts
   muted?: boolean
 }) {
-  const nameClass = muted ? 'italic text-muted' : 'font-semibold text-fg'
   return (
-    <tr className="border-t border-border bg-surface">
-      <td className={`max-w-xs truncate px-4 py-3.5 ${nameClass}`}>{name}</td>
-      <CountCell value={tests.active} highlight divider />
-      <CountCell value={tests.completed} />
-      <CountCell value={interviews.active} highlight divider />
-      <CountCell value={interviews.completed} />
+    <tr className="border-t border-rule">
+      <td className={`max-w-xs truncate px-5 py-3 ${muted ? 'text-graphite' : 'text-ink'}`}>{name}</td>
+      <td className="px-5 py-3">
+        <SessionCountsText counts={tests} />
+      </td>
+      <td className="px-5 py-3">
+        <SessionCountsText counts={interviews} />
+      </td>
     </tr>
   )
-}
-
-function CountCell({ value, highlight = false, divider = false }: { value: number; highlight?: boolean; divider?: boolean }) {
-  const color = value === 0 ? 'text-muted' : highlight ? 'font-semibold text-primary' : 'font-semibold text-fg'
-  return <td className={`px-4 py-3.5 text-right tabular-nums ${divider ? 'border-l border-border' : ''} ${color}`}>{value}</td>
 }

@@ -13,8 +13,8 @@ test('a topic can be created and deleted', async ({ signedInPage: page }) => {
   await expect(card.getByRole('button', { name: 'Test', exact: true })).toBeVisible()
   await expect(card.getByRole('button', { name: 'Mock Interview' })).toBeVisible()
 
-  // Deleting takes two clicks: the X, then Confirm.
-  await card.getByRole('button').first().click()
+  // Deleting takes two clicks: the bin, then Confirm.
+  await card.getByRole('button', { name: `Delete ${name}` }).click()
   await card.getByRole('button', { name: 'Confirm' }).click()
   await expect(topicCard(page, name)).toHaveCount(0)
 })
@@ -26,7 +26,7 @@ test('a topic name can only be used once', async ({ signedInPage: page }) => {
   const input = page.getByPlaceholder('e.g. Spring Boot, Python, DevOps')
   await input.fill(name)
   await input.press('Enter')
-  await expect(page.locator('p.text-danger')).toBeVisible()
+  await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.getByRole('heading', { name, exact: true })).toHaveCount(1)
 })
 
