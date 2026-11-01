@@ -57,7 +57,7 @@ export async function createTopic(page: Page, name: string): Promise<Locator> {
 // ------------------------------------------------------------------------------- Learn Mode
 
 export function chatInput(page: Page): Locator {
-  return page.getByPlaceholder('Type your message...')
+  return page.getByPlaceholder('Type your message…')
 }
 
 export function aiMessages(page: Page): Locator {
@@ -90,7 +90,7 @@ export async function sendChatMessage(page: Page, text: string): Promise<{ first
   await page.waitForFunction(
     (count) => {
       const streaming = document.querySelector('[data-testid="chat-message-streaming"]')
-      if (streaming) return !streaming.textContent?.includes('Thinking...')
+      if (streaming) return !streaming.textContent?.includes('Thinking…')
       // The stream is already over: a very fast reply, or an error.
       return (
         document.querySelectorAll('[data-testid="chat-message-ai"]').length > count ||
@@ -141,7 +141,7 @@ export async function answerAllTestQuestions(page: Page): Promise<void> {
     if ((await options.count()) > 0) {
       await options.nth(i % 4).check()
     } else {
-      await question.getByPlaceholder('Enter your answer here...').fill(i % 2 === 0 ? LONG_ANSWER : 'It depends.')
+      await question.getByPlaceholder('Enter your answer here…').fill(i % 2 === 0 ? LONG_ANSWER : 'It depends.')
     }
   }
   await expect(page.getByText('20 of 20 questions answered')).toBeVisible()

@@ -17,7 +17,7 @@ test('a new user registers, answers onboarding and reaches the dashboard', async
   await expect(continueButton).toBeDisabled()
 
   await page.getByRole('button', { name: 'Backend', exact: true }).click()
-  await page.getByRole('button', { name: /^3-5 years/ }).click()
+  await page.getByRole('button', { name: /^3–5 years/ }).click()
   await continueButton.click()
 
   await expect(page).toHaveURL(/\/dashboard$/)
@@ -33,7 +33,7 @@ test('registering an email twice is refused', async ({ page, account }) => {
   await page.getByRole('button', { name: 'Register' }).click()
 
   await expect(page).toHaveURL(/\/register$/)
-  await expect(page.locator('form p.text-danger')).toBeVisible()
+  await expect(page.locator('form [role="alert"]')).toBeVisible()
 })
 
 test('a wrong password shows an error and stays on the login page', async ({ page, account }) => {

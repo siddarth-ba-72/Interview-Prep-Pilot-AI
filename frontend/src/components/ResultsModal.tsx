@@ -1,8 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { closeResultsModal } from '../features/tests/testSlice'
+import { Button } from './ui/Button'
+import Dialog from './ui/Dialog'
+import ScoreBar from './ui/ScoreBar'
+import StatusPill from './ui/StatusPill'
 
-export default function ResultsModal() {
+/** Shown the moment a test is graded: the score against the pass mark, then where to go next. */
+export default function ResultsModal({ topicId }: { topicId: string }) {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
@@ -10,97 +15,51 @@ export default function ResultsModal() {
   const reports = useAppSelector((state) => state.tests.reportsBySessionId)
 
   if (!open || !sessionId) return null
-
   const report = reports[sessionId]
   if (!report) return null
 
-  const handleViewReport = () => {
-    const topicId = report.testSessionId.split('/')[0] // Adjust based on your URL structure
-    navigate(`/topics/${topicId}/tests/${sessionId}/report`)
-  }
-
-  const handleGoToLearn = () => {
+  // Close first: the modal lives in the store and would otherwise reopen over the next test
+  const go = (path: string) => {
     dispatch(closeResultsModal())
-    navigate('/dashboard')
+    navigate(path)
   }
-
-  const handleDismiss = () => {
-    dispatch(closeResultsModal())
-  }
+  const dismiss = () => dispatch(closeResultsModal())
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={handleDismiss}
-    >
-      <div
-        className="animate-modal-pop w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-2xl"
-        data-clarity-mask="True"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-extrabold text-fg">Test Results</h2>
+    <Dialog labelledBy="results-title" onClose={dismiss} mask>
+      <h2 id="results-title" className="type-section text-lg">
+        Test results
+      </h2>
+      <p className="type-body text-graphite">Attempt #{report.attemptNumber ?? 1}</p>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-border bg-bg p-4 text-center">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">This Test</h3>
-            <p className="mt-1 text-2xl font-extrabold text-primary">
-              {report.rawScore} / {report.maxScore}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-border bg-bg p-4 text-center">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">All-Time Average</h3>
-            <p className="mt-1 text-2xl font-extrabold text-primary">
-              {report.avgScoreAtTime ? report.avgScoreAtTime.toFixed(1) : '—'} / {report.maxScore}
-            </p>
-          </div>
-
-          <div
-            className={`col-span-2 rounded-xl px-4 py-3 text-center text-sm font-bold ${
-              report.passed ? 'bg-success-subtle text-success-fg' : 'bg-warning-subtle text-warning-fg'
-            }`}
-          >
-            {report.passed ? '🎉 Great job!' : '💪 Keep going'}
-          </div>
-        </div>
-
-        <div className="mt-5 text-sm leading-relaxed text-muted">
-          {report.passed ? (
-            <p>Excellent performance! You've demonstrated solid understanding of this topic.</p>
-          ) : (
-            <>
-              <p>
-                Score: <strong className="font-bold text-fg">{report.rawScore} / {report.maxScore}</strong>{' '}
-                (Pass threshold: {report.passThreshold})
-              </p>
-              <p className="mt-1">Consider revisiting Learn Mode to strengthen your understanding.</p>
-            </>
-          )}
-        </div>
-
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button
-            onClick={handleViewReport}
-            className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-fg transition-colors hover:bg-surface-hover"
-          >
-            View Full Report
-          </button>
-          {!report.passed && (
-            <button
-              onClick={handleGoToLearn}
-              className="rounded-lg border border-border px-4 py-2.5 text-sm font-bold text-fg transition-colors hover:bg-surface-hover"
-            >
-              Go to Learn Mode
-            </button>
-          )}
-          <button
-            onClick={handleDismiss}
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover"
-          >
-            Dismiss
-          </button>
-        </div>
+      <div className="mt-5 flex items-end justify-between gap-4">
+        <p className="figures text-3xl font-semibold tracking-[-0.01em] text-ink">
+          {report.rawScore} / {report.maxScore}
+        </p>
+        <StatusPill tone={report.passed ? 'positive' : 'negative'}>
+          {report.passed ? 'Passed' : 'Below the pass mark'}
+        </StatusPill>
       </div>
-    </div>
+      <ScoreBar score={report.rawScore} max={report.maxScore} pass={report.passThreshold} size="md" className="mt-3" />
+      <p className="figures type-meta mt-2.5">
+        Pass mark {report.passThreshold}. Your average on this topic is now{' '}
+        {report.avgScoreAtTime != null ? report.avgScoreAtTime.toFixed(1) : '—'}.
+      </p>
+
+      {!report.passed && (
+        <p className="type-body mt-4 text-ink">
+          The full report lists the questions you missed with model answers. Learn Mode is the quickest way to close
+          the gaps before a re-test.
+        </p>
+      )}
+
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button onClick={dismiss}>Dismiss</Button>
+        {!report.passed && <Button onClick={() => go(`/topics/${topicId}/learn`)}>Go to Learn Mode</Button>}
+        <Button variant="primary" onClick={() => go(`/topics/${topicId}/tests/${sessionId}/report`)}>
+          View full report
+        </Button>
+      </div>
+    </Dialog>
   )
 }

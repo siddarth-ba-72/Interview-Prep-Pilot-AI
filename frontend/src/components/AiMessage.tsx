@@ -1,16 +1,13 @@
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { PROSE } from './ui/prose'
 
-interface AiMessageProps {
-  content: string
-}
-
-export default function AiMessage({ content }: AiMessageProps) {
+/** The tutor's reply, set as a page of notes rather than a chat bubble. */
+export default function AiMessage({ content }: { content: string }) {
   return (
-    <div className="flex justify-start" data-testid="chat-message-ai" data-clarity-mask="True">
-      <div className="max-w-[80%] rounded-2xl rounded-bl-sm border border-border bg-surface px-4 py-3">
-        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-headings:my-2">
-          <ReactMarkdown>{content}</ReactMarkdown>
-        </div>
+    <div data-testid="chat-message-ai" data-clarity-mask="True">
+      <div className={PROSE}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
     </div>
   )

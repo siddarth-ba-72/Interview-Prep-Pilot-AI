@@ -46,12 +46,12 @@ export default function ChatHistory({
       prevScrollHeightRef.current = 0
     } else {
       // New message at bottom — scroll down
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      scrollToBottom(containerRef.current)
     }
   }, [messages])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    scrollToBottom(containerRef.current)
   }, [streamingContent])
 
   // IntersectionObserver on the top sentinel
@@ -74,12 +74,12 @@ export default function ChatHistory({
   }, [onLoadMore])
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6" ref={containerRef}>
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+    <div className="flex-1 overflow-y-auto" ref={containerRef}>
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-7 px-4 py-8 sm:px-6 lg:px-8">
         <div ref={topSentinelRef} />
-        {isLoadingMore && <p className="text-center text-xs text-muted">Loading older messages...</p>}
+        {isLoadingMore && <p className="type-meta text-center">Loading older messages…</p>}
         {!hasMore && messages.length > 0 && (
-          <p className="text-center text-xs text-muted">You've reached the beginning of the conversation.</p>
+          <p className="type-meta text-center">The start of your conversation on this topic.</p>
         )}
         {messages.map((message, index) =>
           message.role === 'AI' ? (
@@ -93,4 +93,9 @@ export default function ChatHistory({
       </div>
     </div>
   )
+}
+
+/** Scrolls only the chat column; scrollIntoView would scroll the window too and hide the header. */
+function scrollToBottom(container: HTMLDivElement | null) {
+  container?.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
 }

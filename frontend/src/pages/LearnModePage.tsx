@@ -1,9 +1,8 @@
 import { useCallback, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { getChatSession, getOlderMessages } from '../api/chat'
-import { extractErrorMessage, listTopics } from '../api/topics'
+import { extractErrorMessage } from '../api/topics'
 import { streamChatMessage } from '../api/chatStream'
 import { trackEvent } from '../features/analytics/clarity'
 import {
@@ -21,14 +20,13 @@ import {
 import ChatHistory from '../components/ChatHistory'
 import MessageInput from '../components/MessageInput'
 import AppHeader from '../components/AppHeader'
+import TopicHeader from '../components/TopicHeader'
+import Notice from '../components/ui/Notice'
 
 export default function LearnModePage() {
   const { topicId } = useParams<{ topicId: string }>()
   const dispatch = useAppDispatch()
-  const navigate = useNavigate()
   const session = useAppSelector((state) => (topicId ? state.chat.sessionsByTopicId[topicId] : undefined))
-  const topicsQuery = useQuery({ queryKey: ['topics'], queryFn: listTopics, staleTime: Infinity })
-  const topicName = topicsQuery.data?.find((t) => t.id === topicId)?.name
 
   useEffect(() => {
     if (!topicId) return
@@ -58,8 +56,7 @@ export default function LearnModePage() {
         else if (event.type === 'done') {
           dispatch(streamCompleted({ topicId }))
           trackEvent('learn_message_sent')
-        }
-        else if (event.type === 'error') dispatch(streamErrored({ topicId, message: event.message }))
+        } else if (event.type === 'error') dispatch(streamErrored({ topicId, message: event.message }))
       },
       onFatalError: (message) => dispatch(streamErrored({ topicId, message })),
     })
@@ -68,13 +65,20 @@ export default function LearnModePage() {
   if (!topicId) return null
 
   return (
-    <div className="flex h-screen flex-col bg-bg">
-      <AppHeader onBack={() => navigate('/dashboard')} title={topicName} subtitle="Learn Mode" />
+    <div className="flex h-[calc(100dvh-49px)] flex-col">
+      <AppHeader />
+      <TopicHeader topicId={topicId} active="learn" />
 
       {!session || session.status === 'loading' ? (
-        <p className="px-6 py-8 text-sm text-muted">Loading chat...</p>
+        <div aria-label="Loading chat" className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+          <div className="flex max-w-[68ch] flex-col gap-2.5">
+            <div className="h-4 w-3/4 rounded bg-press" />
+            <div className="h-4 w-full rounded bg-wash" />
+            <div className="h-4 w-2/3 rounded bg-wash" />
+          </div>
+        </div>
       ) : (
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col">
           <ChatHistory
             messages={session.messages}
             streamingContent={session.streamingContent}
@@ -83,13 +87,11 @@ export default function LearnModePage() {
             isLoadingMore={session.isLoadingMore}
             onLoadMore={handleLoadMore}
           />
-          {session.status === 'error' && session.error && (
-            <p role="alert" className="mx-auto w-full max-w-3xl px-4 text-sm font-medium text-danger sm:px-6">
-              {session.error}
-            </p>
-          )}
-          <div className="border-t border-border bg-surface px-4 py-3 sm:px-6">
-            <div className="mx-auto w-full max-w-3xl">
+          <div className="border-t border-line bg-paper">
+            <div className="mx-auto w-full max-w-4xl px-4 pb-4 pt-3 sm:px-6 lg:px-8">
+              {session.status === 'error' && session.error && (
+                <Notice className="mb-3">{session.error}</Notice>
+              )}
               <MessageInput onSend={handleSend} disabled={session.status === 'streaming'} />
             </div>
           </div>

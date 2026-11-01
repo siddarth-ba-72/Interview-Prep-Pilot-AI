@@ -1,82 +1,28 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import {
-  AlertTriangle,
-  BookOpen,
-  CheckCircle2,
-  ChevronDown,
-  History,
-  Loader2,
-  Lightbulb,
-  RotateCcw,
-  TrendingUp,
-} from 'lucide-react'
+import { Link, useParams } from 'react-router-dom'
+import { ChevronDown } from 'lucide-react'
 import AppHeader from '../components/AppHeader'
-import PageContainer from '../components/PageContainer'
+import TopicHeader from '../components/TopicHeader'
+import PageContainer, { WIDTH } from '../components/PageContainer'
 import RatingBadge from '../components/RatingBadge'
+import { buttonClass } from '../components/ui/Button'
+import Notice from '../components/ui/Notice'
+import ScoreBar from '../components/ui/ScoreBar'
+import StatusPill from '../components/ui/StatusPill'
 import * as interviewAPI from '../api/interviews'
+import { configLabel } from '../features/interviews/labels'
 
 const COMPLETION_REASON_LABELS: Record<string, string> = {
-  USER_ENDED: 'Ended early by you',
+  USER_ENDED: 'Ended early',
   TIME_EXPIRED: 'Time ran out',
   COMPLETED_NATURALLY: 'Completed',
 }
 
-function ScoreRing({ score, maxScore, passed }: { score: number; maxScore: number; passed: boolean }) {
-  const fraction = maxScore > 0 ? Math.min(1, Math.max(0, score / maxScore)) : 0
-  const circumference = 2 * Math.PI * 42
-  const strokeColor = passed ? 'var(--success)' : 'var(--warning)'
-
-  return (
-    <div className="relative h-28 w-28 shrink-0">
-      <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" strokeWidth="8" />
-        <circle
-          cx="50"
-          cy="50"
-          r="42"
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - fraction)}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-extrabold tabular-nums text-fg">{score}</span>
-        <span className="text-[11px] font-semibold text-muted">/ {maxScore}</span>
-      </div>
-    </div>
-  )
-}
-
-function ThemeChips({ items, tone }: { items: string[]; tone: 'success' | 'danger' }) {
-  if (items.length === 0) {
-    return <p className="text-sm text-muted">Nothing recorded here.</p>
-  }
-  const className =
-    tone === 'success'
-      ? 'border-success/30 bg-success-subtle text-success-fg'
-      : 'border-danger/30 bg-danger-subtle text-danger-fg'
-  return (
-    <div className="flex flex-wrap gap-2">
-      {items.map((item) => (
-        <span key={item} className={`rounded-full border px-3 py-1 text-sm font-semibold ${className}`}>
-          {item}
-        </span>
-      ))}
-    </div>
-  )
-}
-
 export default function MockInterviewReportPage() {
-  const navigate = useNavigate()
   const { topicId = '', sessionId = '' } = useParams<{ topicId: string; sessionId: string }>()
   const [report, setReport] = useState<interviewAPI.InterviewReportResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [openExchange, setOpenExchange] = useState<number | null>(null)
 
   useEffect(() => {
     if (!topicId || !sessionId) return
@@ -98,240 +44,204 @@ export default function MockInterviewReportPage() {
     }
   }, [sessionId, topicId])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-bg text-fg">
-        <AppHeader onBack={() => navigate('/dashboard')} title="Mock Interview Report" />
-        <PageContainer maxWidth="max-w-3xl">
-          <div className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-surface p-12">
-            <Loader2 size={20} className="animate-spin text-primary" />
-            <p className="text-sm font-semibold text-fg">Loading your report…</p>
+  return (
+    <div className="min-h-screen">
+      <AppHeader />
+      <TopicHeader topicId={topicId} active="interview" />
+      <PageContainer mask maxWidth={WIDTH.topic} className="flex flex-col gap-10">
+        {loading && (
+          <div aria-label="Loading report" className="flex flex-col gap-3">
+            <div className="h-5 w-48 rounded bg-press" />
+            <div className="h-36 rounded-lg border border-line bg-sheet" />
           </div>
-        </PageContainer>
-      </div>
-    )
-  }
+        )}
+        {!loading && (error || !report) && (
+          <Notice
+            action={
+              <Link to={`/topics/${topicId}/interviews`} className={buttonClass({ size: 'sm', variant: 'ghost' })}>
+                Back to Mock interview
+              </Link>
+            }
+          >
+            {error ?? 'This report could not be found.'}
+          </Notice>
+        )}
+        {report && <ReportBody topicId={topicId} report={report} />}
+      </PageContainer>
+    </div>
+  )
+}
 
-  if (error || !report) {
-    return (
-      <div className="min-h-screen bg-bg text-fg">
-        <AppHeader onBack={() => navigate('/dashboard')} title="Mock Interview Report" />
-        <PageContainer maxWidth="max-w-3xl">
-          <div className="flex flex-col items-start gap-4 rounded-2xl border border-danger/30 bg-danger-subtle p-6">
-            <div className="flex items-center gap-2 text-danger-fg">
-              <AlertTriangle size={18} />
-              <p className="text-sm font-bold">{error ?? 'This report could not be found.'}</p>
-            </div>
-            <button
-              onClick={() => navigate(`/topics/${topicId}/interviews`)}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition-colors hover:bg-primary-hover"
-            >
-              Back to Mock Interview
-            </button>
-          </div>
-        </PageContainer>
-      </div>
-    )
-  }
-
-  const completionLabel = report.completionReason
+function ReportBody({ topicId, report }: { topicId: string; report: interviewAPI.InterviewReportResponse }) {
+  const [openExchange, setOpenExchange] = useState<number | null>(null)
+  const reason = report.completionReason
     ? COMPLETION_REASON_LABELS[report.completionReason] ?? report.completionReason
     : null
+  const date = report.createdAt
+    ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null
+  const meta = [report.config ? configLabel(report.config) : null, reason, `${report.exchangeSummary.length} answered`, date]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
-    <div className="min-h-screen bg-bg text-fg">
-      <AppHeader
-        onBack={() => navigate('/dashboard')}
-        title="Mock Interview Report"
-        actions={
-          <button
-            onClick={() => navigate(`/topics/${topicId}/interviews/history`)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-fg"
-          >
-            <History size={15} />
-            <span className="hidden sm:inline">Past interviews</span>
-          </button>
-        }
-      />
-      <PageContainer mask maxWidth="max-w-3xl">
-        <div className="flex flex-col gap-4">
-          {/* Score summary */}
-          <div className="flex flex-col items-center gap-5 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:flex-row sm:items-center">
-            <ScoreRing score={report.score} maxScore={report.maxScore} passed={report.passed} />
-            <div className="min-w-0 flex-1 text-center sm:text-left">
-              <div
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold ${
-                  report.passed
-                    ? 'border-success/30 bg-success-subtle text-success-fg'
-                    : 'border-warning/30 bg-warning-subtle text-warning-fg'
-                }`}
-              >
-                {report.passed ? <CheckCircle2 size={14} /> : <TrendingUp size={14} />}
-                {report.passed ? 'Passed' : 'Needs work'}
-              </div>
-              <p className="mt-2 text-sm text-muted">
-                Pass threshold is {report.passThreshold} out of {report.maxScore}.
-              </p>
-              <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-                {report.config && (
-                  <>
-                    <span className="rounded-full bg-surface-hover px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-muted">
-                      {report.config.experienceLevel}
-                    </span>
-                    <span className="rounded-full bg-surface-hover px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-muted">
-                      {report.config.difficulty}
-                    </span>
-                    <span className="rounded-full bg-surface-hover px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-muted">
-                      {report.config.durationMinutes} min
-                    </span>
-                  </>
-                )}
-                {completionLabel && (
-                  <span className="rounded-full bg-surface-hover px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-muted">
-                    {completionLabel}
-                  </span>
-                )}
-                <span className="rounded-full bg-surface-hover px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-muted">
-                  {report.exchangeSummary.length} answered
-                </span>
-              </div>
-            </div>
+    <>
+      <section aria-labelledby="score-title">
+        <h2 id="score-title" className="type-section text-lg">
+          Interview score
+        </h2>
+        <div className="mt-3 rounded-lg border border-line bg-sheet p-5 sm:p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="figures text-3xl font-semibold tracking-[-0.01em] text-ink">
+              {report.score}
+              <span className="text-xl font-normal text-graphite"> / {report.maxScore}</span>
+            </p>
+            <StatusPill tone={report.passed ? 'positive' : 'negative'}>
+              {report.passed ? 'Passed' : 'Below the pass mark'}
+            </StatusPill>
           </div>
+          <ScoreBar score={report.score} max={report.maxScore} pass={report.passThreshold} size="md" className="mt-4 max-w-md" />
+          <p className="figures type-meta mt-2.5">
+            Pass mark {report.passThreshold} of {report.maxScore}. Each answer earns 100 if strong, 60 if satisfactory, 20 if weak.
+          </p>
+          <p className="type-meta mt-4 border-t border-rule pt-3">{meta}</p>
+        </div>
+      </section>
 
-          {/* Overall summary */}
-          <div className="rounded-2xl border border-border bg-surface p-5">
-            <h2 className="text-sm font-bold text-fg">Overall assessment</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{report.overallSummary}</p>
-          </div>
+      <section aria-labelledby="assessment-title">
+        <h2 id="assessment-title" className="type-section text-lg">
+          Overall assessment
+        </h2>
+        <p className="mt-2 max-w-[68ch] text-[15px] leading-[1.65] text-ink">{report.overallSummary}</p>
+      </section>
 
-          {/* Strengths / weaknesses */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-surface p-5">
-              <h2 className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-fg">
-                <CheckCircle2 size={15} className="text-success" />
-                Strengths
-              </h2>
-              <ThemeChips items={report.strengths} tone="success" />
-            </div>
-            <div className="rounded-2xl border border-border bg-surface p-5">
-              <h2 className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-fg">
-                <AlertTriangle size={15} className="text-danger" />
-                Areas to improve
-              </h2>
-              <ThemeChips items={report.weaknesses} tone="danger" />
-            </div>
-          </div>
+      <section className="grid gap-6 sm:grid-cols-2">
+        <ThemeList title="Strengths" items={report.strengths} tone="positive" />
+        <ThemeList title="Areas to improve" items={report.weaknesses} tone="negative" />
+      </section>
 
-          {/* Improvement suggestions */}
-          {report.improvementSuggestions.length > 0 && (
-            <div className="rounded-2xl border border-border bg-surface p-5">
-              <h2 className="inline-flex items-center gap-2 text-sm font-bold text-fg">
-                <Lightbulb size={15} className="text-warning" />
-                How a stronger candidate would have answered
-              </h2>
-              <div className="mt-4 flex flex-col gap-4">
-                {report.improvementSuggestions.map((suggestion, index) => (
-                  <div key={index} className="rounded-xl border border-border p-4">
-                    {suggestion.theme && (
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted">{suggestion.theme}</p>
-                    )}
-                    <p className="mt-1 text-sm font-semibold text-fg">{suggestion.question}</p>
-                    <div className="mt-3 rounded-lg bg-surface-hover p-3">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Your answer</p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm text-muted">
-                        {suggestion.userAnswer || '(no answer given)'}
-                      </p>
-                    </div>
-                    <div className="mt-2 rounded-lg border border-success/30 bg-success-subtle p-3">
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-success-fg">A strong answer</p>
-                      <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-success-fg">
-                        {suggestion.betterAnswer}
-                      </p>
-                    </div>
+      {report.improvementSuggestions.length > 0 && (
+        <section aria-labelledby="better-title">
+          <h2 id="better-title" className="type-section text-lg">
+            How a stronger candidate would have answered
+          </h2>
+          <ol className="mt-3 divide-y divide-rule rounded-lg border border-line bg-sheet">
+            {report.improvementSuggestions.map((suggestion, index) => (
+              <li key={index} className="px-5 py-5">
+                {suggestion.theme && <p className="type-label">{suggestion.theme}</p>}
+                <p className="type-question mt-1 text-base leading-[1.55] text-ink">{suggestion.question}</p>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="type-label">Your answer</p>
+                    <p className="type-body mt-1 whitespace-pre-wrap text-graphite">
+                      {suggestion.userAnswer || 'No answer given.'}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  <div className="border-l-2 border-tick pl-4">
+                    <p className="type-label">A strong answer</p>
+                    <p className="type-body mt-1 whitespace-pre-wrap text-ink">{suggestion.betterAnswer}</p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
-          {/* Per-question breakdown */}
-          {report.exchangeSummary.length > 0 && (
-            <div className="rounded-2xl border border-border bg-surface p-5">
-              <h2 className="text-sm font-bold text-fg">Question breakdown</h2>
-              <div className="mt-3 flex flex-col gap-2">
-                {report.exchangeSummary.map((exchange, index) => {
-                  const isOpen = openExchange === index
-                  return (
-                    <div key={index} className="rounded-xl border border-border">
-                      <button
-                        onClick={() => setOpenExchange(isOpen ? null : index)}
-                        className="flex w-full items-start justify-between gap-3 p-3 text-left"
-                      >
-                        <span className="min-w-0">
-                          <span className="block text-[11px] font-bold uppercase tracking-wide text-muted">
-                            {index + 1}. {exchange.theme}
-                            {exchange.isFollowUp && ' · follow-up'}
-                          </span>
-                          <span className="mt-0.5 block truncate text-sm font-semibold text-fg">
-                            {exchange.question}
-                          </span>
-                        </span>
-                        <span className="flex shrink-0 items-center gap-2">
-                          <RatingBadge rating={exchange.rating} size="sm" />
-                          <ChevronDown
-                            size={15}
-                            className={`text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                          />
-                        </span>
-                      </button>
-                      {isOpen && (
-                        <div className="flex flex-col gap-3 border-t border-border p-3 text-sm">
-                          <div>
-                            <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Question</p>
-                            <p className="mt-1 text-fg">{exchange.question}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Your answer</p>
-                            <p className="mt-1 whitespace-pre-wrap text-muted">
-                              {exchange.userAnswer || '(no answer given)'}
-                            </p>
-                          </div>
-                          {exchange.feedback && (
-                            <div>
-                              <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Feedback</p>
-                              <p className="mt-1 text-muted">{exchange.feedback}</p>
-                            </div>
-                          )}
-                          <p className="text-xs font-semibold text-muted">
-                            Scored {exchange.points ?? 0} of 100 for this answer.
+      {report.exchangeSummary.length > 0 && (
+        <section aria-labelledby="questions-title">
+          <h2 id="questions-title" className="type-section text-lg">
+            Question breakdown
+          </h2>
+          <ol className="mt-3 divide-y divide-rule rounded-lg border border-line bg-sheet">
+            {report.exchangeSummary.map((exchange, index) => {
+              const isOpen = openExchange === index
+              return (
+                <li key={index}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenExchange(isOpen ? null : index)}
+                    aria-expanded={isOpen}
+                    className="grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-x-3 px-4 py-4 text-left hover:bg-wash sm:grid-cols-[2.5rem_minmax(0,1fr)_auto] sm:px-5"
+                  >
+                    <span className="figures pt-0.5 text-sm font-medium text-graphite">{index + 1}</span>
+                    <span className="min-w-0">
+                      <span className="type-label block">
+                        {exchange.theme}
+                        {exchange.isFollowUp && ' · follow-up'}
+                      </span>
+                      <span className={`mt-0.5 block text-sm text-ink ${isOpen ? '' : 'truncate'}`}>{exchange.question}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2 pt-0.5">
+                      <RatingBadge rating={exchange.rating} />
+                      <ChevronDown
+                        size={15}
+                        aria-hidden
+                        className={`text-graphite transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
+                      />
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 px-4 pb-5 sm:grid-cols-[2.5rem_minmax(0,1fr)] sm:px-5">
+                      <div />
+                      <div className="flex flex-col gap-3">
+                        <div>
+                          <p className="type-label">Your answer</p>
+                          <p className="type-body mt-1 whitespace-pre-wrap text-graphite">
+                            {exchange.userAnswer || 'No answer given.'}
                           </p>
                         </div>
-                      )}
+                        {exchange.feedback && (
+                          <div>
+                            <p className="type-label">Feedback</p>
+                            <p className="type-body mt-1 text-ink">{exchange.feedback}</p>
+                          </div>
+                        )}
+                        <p className="figures type-meta">Scored {exchange.points ?? 0} of 100 for this answer.</p>
+                      </div>
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        </section>
+      )}
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              onClick={() => navigate(`/topics/${topicId}/learn`)}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover"
-            >
-              <BookOpen size={16} />
-              Revisit topic in Learn Mode
-            </button>
-            <button
-              onClick={() => navigate(`/topics/${topicId}/interviews`)}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-4 py-3 text-sm font-bold text-fg transition-colors hover:bg-surface-hover"
-            >
-              <RotateCcw size={16} />
-              Run another interview
-            </button>
-          </div>
-        </div>
-      </PageContainer>
+      <div className="flex flex-col-reverse gap-2 border-t border-line pt-6 sm:flex-row sm:justify-end">
+        <Link to={`/topics/${topicId}/interviews/history`} className={buttonClass({ size: 'lg' })}>
+          All interviews
+        </Link>
+        <Link to={`/topics/${topicId}/interviews`} className={buttonClass({ size: 'lg' })}>
+          Run another interview
+        </Link>
+        <Link to={`/topics/${topicId}/learn`} className={buttonClass({ variant: 'primary', size: 'lg' })}>
+          Revisit in Learn Mode
+        </Link>
+      </div>
+    </>
+  )
+}
+
+function ThemeList({ title, items, tone }: { title: string; items: string[]; tone: 'positive' | 'negative' }) {
+  return (
+    <div>
+      <h3 className="type-section">{title}</h3>
+      {items.length === 0 ? (
+        <p className="type-body mt-2 text-graphite">Nothing recorded here.</p>
+      ) : (
+        <ul className="mt-2 flex flex-col gap-1.5">
+          {items.map((item) => (
+            <li key={item} className="flex items-start gap-2.5 text-sm text-ink">
+              <span
+                aria-hidden
+                className={`mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full ${tone === 'positive' ? 'bg-tick' : 'bg-redpen'}`}
+              />
+              {item}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

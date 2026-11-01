@@ -1,9 +1,6 @@
-import type { LucideIcon } from 'lucide-react'
-import { ClipboardCheck, LayoutDashboard, MessagesSquare, Mic, UserPlus } from 'lucide-react'
-
 /**
  * Everything the "How it works" page says. The screenshots live in public/how-it-works/{light,dark}/
- * and are re-taken with `node e2e/demo/capture-how-it-works.mjs` (see that script for how to run it).
+ * and are taken from the running app (light and dark, 1600×1000).
  */
 
 export type ShotName =
@@ -36,20 +33,12 @@ export function shotUrl(shot: ShotName, theme: 'light' | 'dark'): string {
   return `/how-it-works/${theme}/${shot}.webp`
 }
 
-/** A labelled marker on a screenshot; x and y are percentages of its width and height. */
-export interface Hotspot {
-  x: number
-  y: number
-  label: string
-}
-
 export interface Scene {
   title: string
   body: string
   shot: ShotName
   /** Where to find this screen in the app, shown in the frame's address bar. */
   where: string
-  hotspots?: Hotspot[]
 }
 
 export interface Step {
@@ -57,7 +46,6 @@ export interface Step {
   nav: string
   /** A few words for the journey strip at the top of the page. */
   summary: string
-  icon: LucideIcon
   title: string
   lead: string
   scenes: Scene[]
@@ -69,7 +57,6 @@ export const STEPS: Step[] = [
     id: 'get-started',
     nav: 'Get started',
     summary: 'Sign up and set your level',
-    icon: UserPlus,
     title: 'Create your account and tell us about yourself',
     lead: 'It takes under a minute. Your answers decide how hard your lessons, tests and interviews are.',
     scenes: [
@@ -90,14 +77,10 @@ export const STEPS: Step[] = [
         body: 'Choose your domain, like Frontend, Backend or Data science, and your experience. Pick College student if you are preparing for campus placements.',
         shot: 'onboarding',
         where: 'Onboarding',
-        hotspots: [
-          { x: 60, y: 55.7, label: 'Preparing for placements? Pick this' },
-          { x: 60, y: 84.5, label: 'Content pitched at your level' },
-        ],
       },
       {
         title: 'Change it any time',
-        body: 'Your answers live under Profile on the dashboard. Update them whenever your goals change.',
+        body: 'Your answers live under Profile, at the top right of every screen. Update them whenever your goals change.',
         shot: 'profile',
         where: 'Dashboard › Profile',
       },
@@ -111,7 +94,6 @@ export const STEPS: Step[] = [
     id: 'dashboard',
     nav: 'Dashboard',
     summary: 'Add the topics you need',
-    icon: LayoutDashboard,
     title: 'Add the topics you want to master',
     lead: 'Everything starts with a topic. Add the subjects you are preparing for, then practise each one in three ways.',
     scenes: [
@@ -120,26 +102,23 @@ export const STEPS: Step[] = [
         body: 'Your topics and your progress live here, along with how your prep track tunes each mode.',
         shot: 'dashboard-empty',
         where: 'Dashboard',
-        hotspots: [{ x: 87, y: 43.8, label: 'Add a topic here' }],
       },
       {
         title: 'Add a topic',
-        body: 'Type any subject, like Python, DBMS, Operating Systems or React, and press Add Topic. Each topic gets its own card.',
+        body: 'Type any subject, like Python, DBMS, Operating Systems or React, and press Add topic. Each topic gets its own row.',
         shot: 'dashboard-topic',
         where: 'Dashboard',
-        hotspots: [{ x: 26.5, y: 73, label: 'Learn, Test or Mock Interview' }],
       },
     ],
     tips: [
-      'Every topic card has Learn, Test and Mock Interview buttons, plus links to its test and interview history.',
-      'Once you take tests, the card shows your average score, so you can see your progress at a glance.',
+      'Every topic row has Learn, Test and Mock interview buttons, plus links to its test and interview history.',
+      'Once you take tests, the row shows your average score against the pass mark, so you can see where you stand at a glance.',
     ],
   },
   {
     id: 'learn',
     nav: 'Learn',
     summary: 'Chat with your AI tutor',
-    icon: MessagesSquare,
     title: 'Learn Mode: your personal AI tutor',
     lead: 'Chat about the topic, ask anything, and go as deep as you need. It is like having a senior who never gets tired of your questions.',
     scenes: [
@@ -177,7 +156,6 @@ export const STEPS: Step[] = [
     id: 'test',
     nav: 'Test',
     summary: 'Take a 20-question test',
-    icon: ClipboardCheck,
     title: 'Test Mode: find out what you really know',
     lead: 'Every test is freshly written for your topic and level, then graded by AI with feedback on every answer.',
     scenes: [
@@ -186,7 +164,6 @@ export const STEPS: Step[] = [
         body: '10 multiple-choice and 10 written questions covering concepts, scenarios and code. It is ready in a few seconds.',
         shot: 'test-questions',
         where: 'Python › Test',
-        hotspots: [{ x: 38, y: 19.3, label: 'Your progress' }],
       },
       {
         title: 'Write your answers',
@@ -217,7 +194,6 @@ export const STEPS: Step[] = [
         body: 'Start a new test from history and it focuses on the areas you got wrong last time.',
         shot: 'test-retest',
         where: 'Python › Test',
-        hotspots: [{ x: 54.8, y: 13.5, label: 'Built from your last attempt' }],
       },
     ],
     tips: [
@@ -229,42 +205,38 @@ export const STEPS: Step[] = [
     id: 'interview',
     nav: 'Interview',
     summary: 'Practise a timed interview',
-    icon: Mic,
-    title: 'Mock Interview: the closest thing to the real one',
+    title: 'Mock interview: the closest thing to the real one',
     lead: 'One question at a time, on a real clock, with feedback after every answer and a full report at the end.',
     scenes: [
       {
         title: 'Set up your interview',
         body: 'Pick how long you want to practise: 30, 45 or 60 minutes. As a student, your level and difficulty are set for you.',
         shot: 'interview-setup',
-        where: 'Python › Mock Interview',
-        hotspots: [{ x: 78.5, y: 60.6, label: 'Choose a duration' }],
+        where: 'Python › Mock interview',
       },
       {
         title: 'Answer one question at a time',
         body: 'Type your answer the way you would say it out loud. The timer keeps running, just like in a real interview.',
         shot: 'interview-question',
-        where: 'Python › Mock Interview',
-        hotspots: [{ x: 20.6, y: 11.4, label: 'The clock never pauses' }],
+        where: 'Python › Mock interview',
       },
       {
         title: 'Feedback after every answer',
         body: 'Each answer is rated Strong, Satisfactory or Needs work, with what was good and what to add.',
         shot: 'interview-feedback',
-        where: 'Python › Mock Interview',
+        where: 'Python › Mock interview',
       },
       {
         title: 'Honest about weak answers',
         body: 'A vague answer is called out, along with what a good answer would have covered.',
         shot: 'interview-needs-work',
-        where: 'Python › Mock Interview',
+        where: 'Python › Mock interview',
       },
       {
         title: 'Your interview report',
         body: 'End whenever you like, or when time runs out. You get a score out of 100, an overall assessment, your strengths and the areas to improve.',
         shot: 'interview-report',
         where: 'Python › Interview history › Report',
-        hotspots: [{ x: 34, y: 14, label: 'Score and verdict' }],
       },
       {
         title: 'Learn from model answers',
@@ -302,7 +274,7 @@ export const LEARN_PROMPTS = [
 
 export const FAQS: Array<{ q: string; a: string }> = [
   {
-    q: 'Where should I start: Learn, Test or Mock Interview?',
+    q: 'Where should I start: Learn, Test or Mock interview?',
     a: 'Start in Learn Mode to build your understanding, take a test to see where you stand, then try a mock interview. After each report, use Revisit to study your weak areas, and repeat.',
   },
   {
@@ -323,7 +295,7 @@ export const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Will I lose my progress if I close the tab?',
-    a: 'No. Chats, tests and reports are saved as you go. An unfinished interview can be resumed from the Mock Interview page, but its clock keeps running while you are away.',
+    a: 'No. Chats, tests and reports are saved as you go. An unfinished interview can be resumed from the Mock interview page, but its clock keeps running while you are away.',
   },
   {
     q: 'How is a test scored?',
@@ -331,6 +303,6 @@ export const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: 'Can I change my experience level later?',
-    a: 'Yes, open Profile on the dashboard. New lessons, tests and interviews use your updated answers.',
+    a: 'Yes, open Profile at the top right. New lessons, tests and interviews use your updated answers.',
   },
 ]

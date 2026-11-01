@@ -23,10 +23,10 @@ export interface AuthResponse {
 
 export const EXPERIENCE_OPTIONS: Array<{ value: ProfileExperience; label: string; hint: string }> = [
   { value: 'STUDENT', label: 'College student', hint: 'Preparing for campus placements' },
-  { value: 'YEARS_0_3', label: '0-3 years', hint: 'Early career' },
-  { value: 'YEARS_3_5', label: '3-5 years', hint: 'Mid level' },
-  { value: 'YEARS_5_8', label: '5-8 years', hint: 'Senior' },
-  { value: 'YEARS_8_13', label: '8-13 years', hint: 'Staff / lead' },
+  { value: 'YEARS_0_3', label: '0–3 years', hint: 'Early career' },
+  { value: 'YEARS_3_5', label: '3–5 years', hint: 'Mid level' },
+  { value: 'YEARS_5_8', label: '5–8 years', hint: 'Senior' },
+  { value: 'YEARS_8_13', label: '8–13 years', hint: 'Staff / lead' },
   { value: 'YEARS_13_PLUS', label: '13+ years', hint: 'Principal / architect' },
 ]
 

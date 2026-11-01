@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { GraduationCap } from 'lucide-react'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { clearCredentials, setCredentials } from '../features/auth/authSlice'
 import api from '../api/axiosInstance'
 import { DOMAIN_OPTIONS, EXPERIENCE_OPTIONS, updateProfile } from '../api/profile'
 import type { ProfileExperience } from '../api/profile'
 import AuthShell from '../components/AuthShell'
+import { Button } from '../components/ui/Button'
+import { inputClass } from '../components/ui/field'
+import Notice from '../components/ui/Notice'
 
 const OTHER_DOMAIN = 'Other'
 
@@ -54,33 +56,33 @@ export default function OnboardingPage() {
     navigate('/login')
   }
 
-  const chipClass = (selected: boolean) =>
-    `rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors ${
-      selected ? 'border-primary bg-primary-subtle text-primary' : 'border-border bg-surface text-fg hover:bg-surface-hover'
+  const optionClass = (selected: boolean) =>
+    `rounded-md border text-left transition-[border-color,background-color,transform] duration-150 active:scale-[0.98] ${
+      selected ? 'border-ink bg-sheet ring-1 ring-ink' : 'border-line bg-sheet hover:border-edge hover:bg-wash'
     }`
 
   return (
     <AuthShell
       title={editing ? 'Update your profile' : 'Tell us about yourself'}
-      subtitle="Two quick questions so PrepPilot can pitch content at the right level."
+      subtitle="Two questions, so Learn, Test and Mock interview are pitched at the right level."
       footer={
         editing ? (
-          <Link to="/dashboard" className="font-semibold text-primary">
-            Back to dashboard
+          <Link to="/dashboard" className="font-medium text-ink underline decoration-edge underline-offset-4 hover:decoration-ink">
+            Back to your topics
           </Link>
         ) : (
           <p>
-            Signed in as {user?.email}.{' '}
-            <button type="button" onClick={handleLogout} className="font-semibold text-primary">
+            Signed in as <span data-clarity-mask="True">{user?.email}</span>.{' '}
+            <button type="button" onClick={handleLogout} className="font-medium text-ink underline decoration-edge underline-offset-4 hover:decoration-ink">
               Sign out
             </button>
           </p>
         )
       }
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-7">
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-3 text-sm font-bold text-fg">What is your preferred domain?</legend>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+        <fieldset>
+          <legend className="mb-3 text-sm font-medium text-ink">What is your preferred domain?</legend>
           <div className="flex flex-wrap gap-2">
             {[...DOMAIN_OPTIONS, OTHER_DOMAIN].map((domain) => (
               <button
@@ -88,7 +90,7 @@ export default function OnboardingPage() {
                 type="button"
                 aria-pressed={domainChoice === domain}
                 onClick={() => setDomainChoice(domain)}
-                className={chipClass(domainChoice === domain)}
+                className={`${optionClass(domainChoice === domain)} h-9 px-3 text-sm text-ink`}
               >
                 {domain}
               </button>
@@ -103,13 +105,13 @@ export default function OnboardingPage() {
               maxLength={100}
               autoFocus
               aria-label="Your domain"
-              className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-fg outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className={`${inputClass} mt-3`}
             />
           )}
         </fieldset>
 
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-3 text-sm font-bold text-fg">What is your current experience?</legend>
+        <fieldset>
+          <legend className="mb-3 text-sm font-medium text-ink">What is your current experience?</legend>
           <div className="grid grid-cols-2 gap-2">
             {EXPERIENCE_OPTIONS.map((option) => {
               const selected = experience === option.value
@@ -119,34 +121,26 @@ export default function OnboardingPage() {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setExperience(option.value)}
-                  className={`rounded-xl border p-3 text-left transition-colors ${
-                    selected ? 'border-primary bg-primary-subtle' : 'border-border bg-surface hover:bg-surface-hover'
-                  }`}
+                  className={`${optionClass(selected)} px-3 py-2.5`}
                 >
-                  <span className="block text-sm font-bold text-fg">{option.label}</span>
-                  <span className="mt-0.5 block text-xs text-muted">{option.hint}</span>
+                  <span className="block text-sm font-medium text-ink">{option.label}</span>
+                  <span className="type-meta block">{option.hint}</span>
                 </button>
               )
             })}
           </div>
           {experience === 'STUDENT' && (
-            <p className="flex items-start gap-2 rounded-lg bg-primary-subtle px-3 py-2.5 text-xs text-fg">
-              <GraduationCap size={15} className="mt-px shrink-0 text-primary" />
-              Learn and Test Mode will focus on what campus placements ask, and mock interviews will be pitched
-              at student level.
-            </p>
+            <Notice tone="info" className="mt-3">
+              Learn and Test will focus on what campus placements ask, and mock interviews will be pitched at student level.
+            </Notice>
           )}
         </fieldset>
 
-        {errorMsg && <p className="text-sm font-medium text-danger">{errorMsg}</p>}
+        {errorMsg && <Notice>{errorMsg}</Notice>}
 
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" variant="primary" size="lg" disabled={!canSubmit} className="w-full">
           {saving ? 'Saving…' : editing ? 'Save changes' : 'Continue'}
-        </button>
+        </Button>
       </form>
     </AuthShell>
   )

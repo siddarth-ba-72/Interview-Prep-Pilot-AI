@@ -1,7 +1,7 @@
 import { useRef, type ReactNode } from 'react'
 import { useInView } from '../../features/howItWorks/hooks'
 
-/** Fades and lifts its children in the first time they scroll into view. */
+/** Lifts its children in, once, the first time they scroll into view. Content is never hidden without motion. */
 export default function Reveal({
   children,
   delay = 0,
@@ -18,8 +18,8 @@ export default function Reveal({
     <div
       ref={ref}
       style={{ transitionDelay: visible ? `${delay}ms` : '0ms' }}
-      className={`transition-all duration-700 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${
-        visible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+      className={`transition-[opacity,transform] duration-500 ease-out motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
       } ${className}`}
     >
       {children}

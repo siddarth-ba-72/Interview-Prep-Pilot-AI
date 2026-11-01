@@ -10,12 +10,33 @@ import {
   setTestSession,
   updateAnswer,
   setTestSubmitting,
+  setTestSubmitFailed,
   setTestCompleted,
   openResultsModal,
 } from '../features/tests/testSlice'
 import ResultsModal from '../components/ResultsModal'
 import AppHeader from '../components/AppHeader'
-import PageContainer from '../components/PageContainer'
+import TopicHeader from '../components/TopicHeader'
+import PageContainer, { WIDTH } from '../components/PageContainer'
+import { Button } from '../components/ui/Button'
+import { textareaClass } from '../components/ui/field'
+import Notice from '../components/ui/Notice'
+import StatusPill from '../components/ui/StatusPill'
+import Spinner from '../components/ui/Spinner'
+
+/**
+ * One start request per topic at a time. React's StrictMode runs effects twice in development, and a
+ * second, later response would replace a test the learner has already started answering.
+ */
+const startRequests = new Map<string, Promise<testAPI.TestSessionStartResponse>>()
+
+function startTestOnce(topicId: string): Promise<testAPI.TestSessionStartResponse> {
+  const pending = startRequests.get(topicId)
+  if (pending) return pending
+  const request = testAPI.startTest(topicId).finally(() => startRequests.delete(topicId))
+  startRequests.set(topicId, request)
+  return request
+}
 
 export default function TestPage() {
   const navigate = useNavigate()
@@ -23,33 +44,27 @@ export default function TestPage() {
   const topicId = params.topicId!
   const dispatch = useAppDispatch()
 
-  const [topic, setTopic] = useState<topicAPI.Topic | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [confirmingBlank, setConfirmingBlank] = useState(false)
 
   const testState = useAppSelector((state: RootState) => state.tests.activeSessionByTopicId[topicId])
 
-  // Load topic and initialize test on mount
+  // Start the test on mount; the server returns the in-progress one if there is one
   useEffect(() => {
     if (!topicId) {
-      setError('Topic ID is missing')
+      setLoadError('Topic ID is missing')
       setLoading(false)
       return
     }
+    let cancelled = false
 
-    async function loadTopicAndTest() {
+    async function loadTest() {
       try {
-        const topics = await topicAPI.listTopics()
-        const currentTopic = topics.find((t: topicAPI.Topic) => t.id === topicId)
-        if (!currentTopic) {
-          setError('Topic not found')
-          return
-        }
-        setTopic(currentTopic)
-
-        // Start test
         dispatch(setTestGenerating({ topicId }))
-        const response = await testAPI.startTest(topicId)
+        const response = await startTestOnce(topicId)
+        if (cancelled) return
         dispatch(
           setTestSession({
             topicId,
@@ -61,142 +76,170 @@ export default function TestPage() {
         )
         trackEvent('test_started')
       } catch (err) {
-        setError(topicAPI.extractErrorMessage(err, (err as Error).message || 'Failed to load test'))
+        if (!cancelled) setLoadError(topicAPI.extractErrorMessage(err, (err as Error).message || 'Failed to load test'))
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
-    loadTopicAndTest()
+    loadTest()
+    return () => {
+      cancelled = true
+    }
   }, [topicId, dispatch])
 
   const handleAnswerChange = (questionId: string, answer: string | null): void => {
     dispatch(updateAnswer({ topicId, questionId, answer }))
   }
 
-  const handleSubmit = async () => {
-    if (!testState) return
+  const blankCount = testState
+    ? testState.questions.length - Object.values(testState.answers).filter((a) => a !== null).length
+    : 0
 
-    const unansweredCount = testState.questions.length -
-      Object.values(testState.answers).filter((a) => a !== null).length
-
-    if (unansweredCount > 0) {
-      if (!confirm(`${unansweredCount} of ${testState.questions.length} questions unanswered. Submit anyway?`)) {
-        return
-      }
-    }
-
+  const submit = async () => {
+    if (!testState?.sessionId) return
+    setConfirmingBlank(false)
+    setSubmitError(null)
     try {
       dispatch(setTestSubmitting({ topicId }))
-
-      const answers: testAPI.SubmitAnswerRequest[] = testState.questions.map((q: testAPI.TestQuestion) => ({
+      const answers: testAPI.SubmitAnswerRequest[] = testState.questions.map((q) => ({
         questionId: q.questionId,
         userAnswer: testState.answers[q.questionId] || null,
       }))
-
-      const report = await testAPI.submitTest(topicId, testState.sessionId!, {
-        answers,
-      })
-
+      const report = await testAPI.submitTest(topicId, testState.sessionId, { answers })
       dispatch(setTestCompleted({ topicId, report }))
       trackEvent('test_submitted')
-      dispatch(openResultsModal({ sessionId: testState.sessionId! }))
+      dispatch(openResultsModal({ sessionId: testState.sessionId }))
     } catch (err) {
-      setError((err as Error).message || 'Failed to submit test')
+      setSubmitError(topicAPI.extractErrorMessage(err, 'Could not grade your test. Your answers are still here; try again.'))
+      dispatch(setTestSubmitFailed({ topicId }))
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-bg">
-        <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test Mode" />
-        <PageContainer maxWidth="max-w-3xl">
-          <p className="text-sm text-muted">Generating test...</p>
-        </PageContainer>
-      </div>
-    )
+  const handleSubmit = () => {
+    if (blankCount > 0 && !confirmingBlank) {
+      setConfirmingBlank(true)
+      return
+    }
+    void submit()
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-bg">
-        <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test Mode" />
-        <PageContainer maxWidth="max-w-3xl" className="flex flex-col items-start gap-4">
-          <p role="alert" className="text-sm font-medium text-danger">
-            {error}
-          </p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-fg hover:bg-primary-hover"
-          >
-            Back to Dashboard
-          </button>
-        </PageContainer>
-      </div>
-    )
-  }
-
-  if (!testState || !topic) {
-    return (
-      <div className="min-h-screen bg-bg">
-        <AppHeader onBack={() => navigate('/dashboard')} subtitle="Test Mode" />
-        <PageContainer maxWidth="max-w-3xl">
-          <p className="text-sm text-muted">Loading...</p>
-        </PageContainer>
-      </div>
-    )
-  }
-
-  const mcqQuestions = testState.questions.filter((q: testAPI.TestQuestion) => q.section === 'MCQ')
-  const subjectiveQuestions = testState.questions.filter((q: testAPI.TestQuestion) => q.section === 'SUBJECTIVE')
-  const answeredCount = Object.values(testState.answers).filter((a) => a !== null).length
-  const isSubmitting = testState.status === 'submitting'
+  const ready = !loading && !loadError && testState && testState.status !== 'generating'
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader onBack={() => navigate('/dashboard')} title={topic.name} subtitle="Test Mode" />
+    <div className="min-h-screen">
+      <AppHeader />
+      <TopicHeader topicId={topicId} active="test" />
 
-      <PageContainer mask maxWidth="max-w-3xl" className="flex flex-col gap-8">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded-full bg-primary-subtle px-3 py-1 text-xs font-bold text-primary">
-              Attempt #{testState.attemptNumber ?? 1}
-            </span>
-            {testState.basedOnPreviousAttempt && (
-              <span className="rounded-full bg-warning-subtle px-3 py-1 text-xs font-semibold text-warning-fg">
-                Focused on your weak areas from last attempt
-              </span>
-            )}
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-border">
+      {!ready && (
+        <PageContainer maxWidth={WIDTH.topic}>
+          {loadError ? (
+            <Notice
+              action={
+                <Button size="sm" variant="ghost" onClick={() => navigate('/dashboard')}>
+                  Back to topics
+                </Button>
+              }
+            >
+              {loadError}
+            </Notice>
+          ) : (
+            <div className="rounded-lg border border-line bg-sheet px-5 py-6">
+              <p className="flex items-center gap-2.5 text-sm font-medium text-ink">
+                <Spinner />
+                Writing your test…
+              </p>
+              <p className="type-body mt-1 pl-[26px] text-graphite">
+                Ten multiple-choice and ten written questions, pitched at your track. This can take up to a minute.
+              </p>
+            </div>
+          )}
+        </PageContainer>
+      )}
+
+      {ready && (
+        <TestPaper
+          testState={testState}
+          blankCount={blankCount}
+          confirmingBlank={confirmingBlank}
+          submitError={submitError}
+          onAnswer={handleAnswerChange}
+          onSubmit={handleSubmit}
+          onCancelConfirm={() => setConfirmingBlank(false)}
+        />
+      )}
+
+      <ResultsModal topicId={topicId} />
+    </div>
+  )
+}
+
+type TestState = NonNullable<RootState['tests']['activeSessionByTopicId'][string]>
+
+function TestPaper({
+  testState,
+  blankCount,
+  confirmingBlank,
+  submitError,
+  onAnswer,
+  onSubmit,
+  onCancelConfirm,
+}: {
+  testState: TestState
+  blankCount: number
+  confirmingBlank: boolean
+  submitError: string | null
+  onAnswer: (questionId: string, answer: string | null) => void
+  onSubmit: () => void
+  onCancelConfirm: () => void
+}) {
+  const mcq = testState.questions.filter((q) => q.section === 'MCQ')
+  const written = testState.questions.filter((q) => q.section === 'SUBJECTIVE')
+  const total = testState.questions.length
+  const answered = total - blankCount
+  const isSubmitting = testState.status === 'submitting'
+  const isCompleted = testState.status === 'completed'
+
+  return (
+    <>
+      {/* Progress stays in view while the paper scrolls */}
+      <div className="sticky top-[53px] z-20 border-b border-line bg-paper">
+        <div className={`mx-auto flex w-full ${WIDTH.topic} items-center gap-4 px-4 py-2.5 sm:px-6 lg:px-8`}>
+          <span className="figures shrink-0 text-sm text-graphite">
+            <span className="font-medium text-ink">{answered}</span> of {total} questions answered
+          </span>
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-press" aria-hidden>
             <div
-              className="h-full rounded-full bg-primary transition-all duration-300"
-              style={{ width: `${(answeredCount / testState.questions.length) * 100}%` }}
+              className="h-full origin-left rounded-full bg-ballpoint transition-transform duration-300 ease-out"
+              style={{ transform: `scaleX(${total ? answered / total : 0})` }}
             />
           </div>
-          <p className="mt-2 text-sm text-muted">
-            {answeredCount} of {testState.questions.length} questions answered
-          </p>
+          <Button variant="primary" size="sm" onClick={onSubmit} disabled={isSubmitting || isCompleted} className="shrink-0">
+            {isSubmitting && <Spinner size={14} className="text-action-ink" />}
+            {isSubmitting ? 'Grading…' : 'Submit'}
+          </Button>
+        </div>
+      </div>
+
+      <PageContainer mask maxWidth={WIDTH.topic} className="flex flex-col gap-10">
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusPill tone="neutral">Attempt #{testState.attemptNumber ?? 1}</StatusPill>
+          {testState.basedOnPreviousAttempt && (
+            <StatusPill tone="warning">Focused on your weak areas from last attempt</StatusPill>
+          )}
         </div>
 
-        <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold text-fg">
-            Multiple Choice Questions <span className="text-sm font-medium text-muted">(10 questions)</span>
-          </h2>
-          {mcqQuestions.map((question: testAPI.TestQuestion, idx: number) => (
-            <div key={question.questionId} className="rounded-2xl border border-border bg-surface p-5">
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Question {idx + 1}</h3>
-              <p className="mb-4 text-sm font-medium text-fg">{question.text}</p>
-              <div className="flex flex-col gap-2">
-                {question.options?.map((option: string) => {
+        <Section title="Multiple choice" rule={`${mcq.length} questions. A right answer scores +1, a wrong one −1, a blank 0.`}>
+          {mcq.map((question, idx) => (
+            <Question key={question.questionId} number={idx + 1} text={question.text}>
+              <div className="flex flex-col gap-1.5" role="radiogroup" aria-label={`Question ${idx + 1} options`}>
+                {question.options?.map((option) => {
                   const checked = testState.answers[question.questionId] === option
                   return (
                     <label
                       key={option}
-                      className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3.5 py-2.5 text-sm transition-colors ${
-                        checked
-                          ? 'border-primary bg-primary-subtle text-fg'
-                          : 'border-border text-fg hover:bg-surface-hover'
+                      className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 text-sm leading-snug transition-colors duration-150 ${
+                        checked ? 'border-ink bg-sheet ring-1 ring-ink' : 'border-line bg-sheet hover:border-edge hover:bg-wash'
                       }`}
                     >
                       <input
@@ -204,52 +247,86 @@ export default function TestPage() {
                         name={question.questionId}
                         value={option}
                         checked={checked}
-                        onChange={(e) => handleAnswerChange(question.questionId, e.target.value)}
-                        disabled={isSubmitting}
-                        className="h-4 w-4 accent-primary"
+                        onChange={(e) => onAnswer(question.questionId, e.target.value)}
+                        disabled={isSubmitting || isCompleted}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-ink"
                       />
-                      {option}
+                      <span className="text-ink">{option}</span>
                     </label>
                   )
                 })}
               </div>
-            </div>
+            </Question>
           ))}
-        </section>
+        </Section>
 
-        <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-bold text-fg">
-            Subjective / Code Completion <span className="text-sm font-medium text-muted">(10 questions)</span>
-          </h2>
-          {subjectiveQuestions.map((question: testAPI.TestQuestion, idx: number) => (
-            <div key={question.questionId} className="rounded-2xl border border-border bg-surface p-5">
-              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
-                Question {idx + 1 + mcqQuestions.length}
-              </h3>
-              <p className="mb-4 text-sm font-medium text-fg">{question.text}</p>
+        <Section title="Written answers" rule={`${written.length} questions. A right answer scores +5, a wrong one −5, a blank 0. Code is fine.`}>
+          {written.map((question, idx) => (
+            <Question key={question.questionId} number={idx + 1 + mcq.length} text={question.text}>
               <textarea
+                aria-label={`Answer to question ${idx + 1 + mcq.length}`}
                 value={testState.answers[question.questionId] || ''}
-                onChange={(e) => handleAnswerChange(question.questionId, e.target.value || null)}
-                placeholder="Enter your answer here..."
-                disabled={isSubmitting}
-                className="min-h-32 w-full rounded-lg border border-border bg-bg p-3 font-mono text-sm text-fg outline-none transition-colors placeholder:font-sans placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
+                onChange={(e) => onAnswer(question.questionId, e.target.value || null)}
+                placeholder="Enter your answer here…"
+                disabled={isSubmitting || isCompleted}
+                className={`${textareaClass} min-h-32 resize-y font-mono text-[13px] placeholder:font-sans sm:text-[13px]`}
               />
-            </div>
+            </Question>
           ))}
-        </section>
+        </Section>
 
-        <div className="flex justify-end pb-4">
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-fg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Test'}
-          </button>
+        <div className="flex flex-col items-stretch gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
+          {submitError ? (
+            <Notice className="sm:flex-1">{submitError}</Notice>
+          ) : confirmingBlank ? (
+            <p className="text-sm text-ink">
+              {blankCount} {blankCount === 1 ? 'question is' : 'questions are'} blank and will score 0. Submit anyway?
+            </p>
+          ) : (
+            <p className="figures text-sm text-graphite">
+              {blankCount === 0 ? 'Every question has an answer.' : `${blankCount} still blank.`}
+            </p>
+          )}
+          <div className="flex shrink-0 gap-2">
+            {confirmingBlank && (
+              <Button onClick={onCancelConfirm} size="lg">
+                Keep answering
+              </Button>
+            )}
+            <Button variant="primary" size="lg" onClick={onSubmit} disabled={isSubmitting || isCompleted}>
+              {isSubmitting ? 'Grading…' : confirmingBlank ? 'Submit anyway' : 'Submit test'}
+            </Button>
+          </div>
         </div>
       </PageContainer>
+    </>
+  )
+}
 
-      <ResultsModal />
-    </div>
+function Section({ title, rule, children }: { title: string; rule: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-4">
+      <div>
+        <h2 className="type-section text-lg">{title}</h2>
+        <p className="type-body text-graphite">{rule}</p>
+      </div>
+      <div className="divide-y divide-rule rounded-lg border border-line bg-sheet">{children}</div>
+    </section>
+  )
+}
+
+/** One question on the paper: its number in the margin, the question in the serif, then the answer. */
+function Question({ number, text, children }: { number: number; text: string; children: React.ReactNode }) {
+  return (
+    <article className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 px-4 py-5 sm:grid-cols-[2.5rem_minmax(0,1fr)] sm:px-5">
+      <h3 className="figures pt-0.5 text-sm font-medium text-graphite">
+        <span className="sr-only">Question </span>
+        {number}
+      </h3>
+      <div className="min-w-0">
+        <p className="type-question mb-4 whitespace-pre-wrap text-[17px] leading-[1.55] text-ink">{text}</p>
+        {children}
+      </div>
+    </article>
   )
 }

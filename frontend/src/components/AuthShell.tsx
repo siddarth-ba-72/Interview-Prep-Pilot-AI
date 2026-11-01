@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { MessagesSquare, ClipboardCheck, Mic, ArrowRight } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+import { Wordmark } from './BrandMark'
+import ScoreBar from './ui/ScoreBar'
+import StatusPill from './ui/StatusPill'
 
-const FEATURES = [
-  { icon: MessagesSquare, label: 'Learn Mode', desc: 'Chat with an AI tutor on any topic, anytime.' },
-  { icon: ClipboardCheck, label: 'Test Mode', desc: 'Auto-generated questions with instant scoring.' },
-  { icon: Mic, label: 'Mock Interview', desc: 'Sequential Q&A with real-time evaluation.' },
-]
-
+/**
+ * Sign-in, registration and onboarding: the form on the left, and on wide screens a piece of the
+ * product on the right, built from the same components the app uses (sample content).
+ */
 export default function AuthShell({
   title,
   subtitle,
@@ -21,70 +21,71 @@ export default function AuthShell({
   footer?: ReactNode
 }) {
   return (
-    <div className="flex min-h-screen w-full flex-col bg-bg lg:flex-row">
-      <div className="relative w-full overflow-hidden bg-gradient-to-br from-primary via-primary to-accent lg:w-1/2 lg:shrink-0 flex flex-col justify-between p-8 sm:p-12">
-        <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 translate-x-1/3 translate-y-1/3 rounded-full bg-black/10 blur-3xl" />
-        <div className="pointer-events-none absolute inset-0 [background-image:radial-gradient(rgba(255,255,255,0.16)_1px,transparent_1px)] [background-size:22px_22px]" />
-
-        <div className="relative flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-base font-black text-white backdrop-blur-sm">
-            P
-          </span>
-          <span className="text-lg font-extrabold tracking-tight text-white">PrepPilot</span>
+    <div className="grid min-h-screen w-full lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      <div className="flex flex-col px-5 py-6 sm:px-10">
+        <div className="flex items-center justify-between">
+          <Link to="/how-it-works" className="no-underline hover:no-underline" aria-label="PrepPilot, how it works">
+            <Wordmark />
+          </Link>
+          <ThemeToggle />
         </div>
 
-        <div className="relative max-w-md">
-          <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-white">
-            Walk into your next interview ready.
-          </h2>
-          <p className="mt-3 text-sm leading-relaxed text-white/80">
-            Create a topic, learn it with an AI tutor, then stress-test yourself before the real thing.
-          </p>
-
-          <div className="mt-10 flex flex-col gap-5">
-            {FEATURES.map(({ icon: Icon, label, desc }) => (
-              <div key={label} className="flex items-start gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white backdrop-blur-sm">
-                  <Icon size={17} />
-                </span>
-                <div>
-                  <p className="text-sm font-bold text-white">{label}</p>
-                  <p className="text-xs text-white/70">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <Link
-            to="/how-it-works"
-            className="group mt-10 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 hover:no-underline"
-          >
-            New here? See how it works
-            <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
-          </Link>
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">
+          <h1 className="type-title">{title}</h1>
+          {subtitle && <p className="type-body mt-1.5 text-graphite">{subtitle}</p>}
+          <div className="mt-7">{children}</div>
+          {footer && <div className="mt-6 text-sm text-graphite">{footer}</div>}
         </div>
       </div>
 
-      <div className="relative flex w-full flex-1 items-center justify-center px-4 py-12 sm:px-6 lg:w-1/2">
-        <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
-          <ThemeToggle />
+      <aside aria-hidden className="hidden border-l border-line bg-wash lg:flex lg:flex-col lg:justify-center lg:px-14 xl:px-20">
+        <div className="max-w-md">
+          <p className="text-[28px] font-semibold leading-[1.2] tracking-[-0.015em] text-ink">
+            Clear the bar before the real interview.
+          </p>
+          <p className="type-body mt-3 text-[15px] text-graphite">
+            Add any topic. Learn it with a tutor, take a 20-question test, then sit a timed mock interview. Every score is
+            drawn against its pass mark.
+          </p>
         </div>
-        <div className="w-full max-w-sm">
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-base font-black text-white">
-              P
-            </span>
-            <span className="text-lg font-extrabold tracking-tight text-fg">PrepPilot</span>
-          </div>
 
-          <h1 className="text-2xl font-extrabold tracking-tight text-fg">{title}</h1>
-          {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
+        <ProductSample />
 
-          <div className="mt-7">{children}</div>
+        <Link
+          to="/how-it-works"
+          tabIndex={-1}
+          className="mt-8 w-fit text-sm font-medium text-ink underline decoration-edge underline-offset-4 hover:decoration-ink"
+        >
+          See how it works
+        </Link>
+      </aside>
+    </div>
+  )
+}
 
-          {footer && <div className="mt-6 text-sm text-muted">{footer}</div>}
+/** A graded test and an interview question, as they appear in the app. */
+function ProductSample() {
+  return (
+    <div className="mt-10 max-w-md rounded-lg border border-line bg-sheet">
+      <div className="px-5 py-4">
+        <p className="type-meta">Kubernetes · Test, attempt #3</p>
+        <div className="mt-1.5 flex items-center gap-3">
+          <p className="figures text-2xl font-semibold text-ink">
+            42<span className="text-base font-normal text-graphite"> / 60</span>
+          </p>
+          <StatusPill tone="positive">Passed</StatusPill>
         </div>
+        <ScoreBar score={42} max={60} pass={36} size="md" className="mt-3" />
+        <p className="type-meta mt-2">Pass mark 36</p>
+      </div>
+      <div className="border-t border-rule px-5 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="type-meta">Mock interview · Deployments</p>
+          <StatusPill tone="positive">Strong</StatusPill>
+        </div>
+        <p className="type-question mt-1.5 text-[17px] leading-[1.45] text-ink">
+          A release doubles your error rate. How do you roll it back without downtime?
+        </p>
       </div>
     </div>
   )

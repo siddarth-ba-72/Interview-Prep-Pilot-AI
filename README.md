@@ -20,7 +20,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/sign-in.webp">
-  <img src="frontend/public/how-it-works/light/sign-in.webp" alt="PrepPilot sign-in page with the tagline: Walk into your next interview ready" width="860">
+  <img src="frontend/public/how-it-works/light/sign-in.webp" alt="PrepPilot sign-in page with the tagline: Clear the bar before the real interview" width="860">
 </picture>
 
 </div>
@@ -52,8 +52,8 @@ flowchart LR
   <tr>
     <td width="56%">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset=".github/assets/learn-mode-dark.webp">
-        <img src=".github/assets/learn-mode-light.webp" alt="Learn Mode: the AI tutor answers a follow-up question with a code example">
+        <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/learn-followup.webp">
+        <img src="frontend/public/how-it-works/light/learn-followup.webp" alt="Learn Mode: the AI tutor answers a follow-up question with a code example">
       </picture>
     </td>
     <td valign="top">
@@ -70,7 +70,7 @@ flowchart LR
     <td width="56%">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="frontend/public/how-it-works/dark/test-report.webp">
-        <img src="frontend/public/how-it-works/light/test-report.webp" alt="Test report: score summary, strengths, areas for improvement and a per-question breakdown">
+        <img src="frontend/public/how-it-works/light/test-report.webp" alt="Test report: the score against its pass mark, strengths, areas for improvement and every question marked">
       </picture>
     </td>
     <td valign="top">

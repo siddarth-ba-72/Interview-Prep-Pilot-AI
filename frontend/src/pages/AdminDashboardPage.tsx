@@ -6,7 +6,11 @@ import AdminTabs from '../components/AdminTabs'
 import AppHeader from '../components/AppHeader'
 import PageContainer from '../components/PageContainer'
 import Pager from '../components/Pager'
-import { SessionCountsText, SessionTile, StatTile } from '../components/AdminStats'
+import { KpiStrip, SessionCountsText, sessionKpi } from '../components/AdminStats'
+import { Button } from '../components/ui/Button'
+import EmptyState from '../components/ui/EmptyState'
+import Notice from '../components/ui/Notice'
+import StatusPill from '../components/ui/StatusPill'
 import { getActivitySummary, getAdminUserStats, getUsersActivity, listAdminUsers } from '../api/admin'
 import type { AdminUser, UserActivity } from '../api/admin'
 import { experienceLabel, formatDate } from '../features/admin/format'
@@ -50,70 +54,62 @@ export default function AdminDashboardPage() {
   const usersPage = usersQuery.data
 
   return (
-    <div className="min-h-screen bg-bg">
-      <AppHeader onBack={() => navigate('/dashboard')} title="Admin" subtitle="Read-only" />
+    <div className="min-h-screen">
+      <AppHeader />
 
-      <PageContainer mask className="flex flex-col gap-7">
-        <AdminTabs />
-
+      <PageContainer mask className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">Admin dashboard</h1>
-          <p className="mt-1 text-sm text-muted">
-            Users, their topics, and how many tests and mock interviews they have taken. Counts only: no scores,
+          <h1 className="type-title">Admin</h1>
+          <p className="type-body mt-1 max-w-2xl text-graphite">
+            Read-only. Profiles, topic names, and how many tests and mock interviews each user has taken. No scores,
             answers or chats.
           </p>
         </div>
 
+        <AdminTabs />
+
         <section aria-label="Overview" className="flex flex-col gap-2">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatTile label="Users" value={userStatsQuery.data?.totalUsers} />
-            <StatTile label="Topics" value={summary?.topics} />
-            <SessionTile label="Tests" counts={summary?.tests} />
-            <SessionTile label="Mock interviews" counts={summary?.interviews} />
-          </div>
-          {(userStatsQuery.isError || summaryQuery.isError) && (
-            <p className="text-sm font-medium text-danger">Could not load the overview.</p>
-          )}
+          <KpiStrip
+            items={[
+              { label: 'Users', value: userStatsQuery.data?.totalUsers },
+              { label: 'Topics', value: summary?.topics },
+              sessionKpi('Tests', summary?.tests),
+              sessionKpi('Mock interviews', summary?.interviews),
+            ]}
+          />
+          {(userStatsQuery.isError || summaryQuery.isError) && <Notice>Could not load the overview.</Notice>}
         </section>
 
-        <section aria-label="Users" className="flex flex-col gap-4">
+        <section aria-labelledby="users-title" className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-extrabold tracking-tight text-fg">Users</h2>
-            <label className="flex w-full items-center gap-2 rounded-xl border border-border bg-surface px-3 sm:w-80">
-              <Search size={15} className="shrink-0 text-muted" />
+            <h2 id="users-title" className="type-section">
+              Users
+              {usersPage && <span className="figures ml-2 font-normal text-pencil">{usersPage.total.toLocaleString()}</span>}
+            </h2>
+            <label className="flex h-9 w-full items-center gap-2 rounded-md border border-edge bg-sheet px-3 focus-within:border-ink focus-within:ring-1 focus-within:ring-ink sm:w-72">
+              <Search size={15} aria-hidden className="shrink-0 text-pencil" />
               <input
                 type="search"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Search name or email"
                 aria-label="Search users by name or email"
-                className="h-10 min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted"
+                className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-pencil sm:text-sm"
               />
             </label>
           </div>
 
-          {usersQuery.isLoading && <p className="text-sm text-muted">Loading users…</p>}
-          {usersQuery.isError && <p className="text-sm font-medium text-danger">Could not load users.</p>}
-          {activityQuery.isError && (
-            <p className="text-sm font-medium text-danger">Could not load topic and session counts.</p>
-          )}
+          {usersQuery.isLoading && <div aria-label="Loading users" className="h-48 rounded-lg border border-line bg-sheet" />}
+          {usersQuery.isError && <Notice>Could not load users.</Notice>}
+          {activityQuery.isError && <Notice>Could not load topic and session counts.</Notice>}
 
           {usersPage && usersPage.users.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-border bg-surface/50 px-6 py-12 text-center">
-              <p className="text-sm font-medium text-muted">
-                {search ? `No users match “${search}”.` : 'No users yet.'}
-              </p>
-            </div>
+            <EmptyState>{search ? `No users match “${search}”.` : 'No users yet.'}</EmptyState>
           )}
 
           {usersPage && usersPage.users.length > 0 && (
             <>
-              <UsersTable
-                users={usersPage.users}
-                activityById={activityById}
-                onOpen={(id) => navigate(`/admin/users/${id}`)}
-              />
-
+              <UsersTable users={usersPage.users} activityById={activityById} onOpen={(id) => navigate(`/admin/users/${id}`)} />
               <Pager
                 page={usersPage.page}
                 size={usersPage.size}
@@ -140,18 +136,18 @@ function UsersTable({
 }) {
   return (
     <>
-      <div className="hidden overflow-hidden rounded-2xl border border-border md:block">
+      <div className="hidden overflow-hidden rounded-lg border border-line bg-sheet md:block">
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="bg-surface-hover text-xs font-semibold uppercase tracking-wide text-muted">
-              <th className="px-4 py-3">User</th>
-              <th className="px-4 py-3">Experience</th>
-              <th className="px-4 py-3">Joined</th>
-              <th className="px-4 py-3 text-right">Topics</th>
-              <th className="px-4 py-3">Tests</th>
-              <th className="px-4 py-3">Mock interviews</th>
-              <th className="px-4 py-3 text-right">
-                <span className="sr-only">Action</span>
+            <tr className="text-xs text-graphite">
+              <th className="px-5 py-3 font-normal">User</th>
+              <th className="px-5 py-3 font-normal">Experience</th>
+              <th className="px-5 py-3 font-normal">Joined</th>
+              <th className="px-5 py-3 text-right font-normal">Topics</th>
+              <th className="px-5 py-3 text-right font-normal">Tests</th>
+              <th className="px-5 py-3 text-right font-normal">Mock interviews</th>
+              <th className="px-5 py-3">
+                <span className="sr-only">Open</span>
               </th>
             </tr>
           </thead>
@@ -159,29 +155,25 @@ function UsersTable({
             {users.map((user) => {
               const activity = activityById.get(user.id)
               return (
-                <tr key={user.id} className="border-t border-border bg-surface transition-colors hover:bg-surface-hover">
-                  <td className="max-w-72 px-4 py-3.5">
+                <tr key={user.id} className="border-t border-rule">
+                  <td className="max-w-72 px-5 py-3">
                     <UserName user={user} />
                   </td>
-                  <td className="px-4 py-3.5 text-muted">{experienceLabel(user.experienceLevel)}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-muted">{formatDate(user.createdAt)}</td>
-                  <td className="px-4 py-3.5 text-right font-semibold tabular-nums text-fg">
-                    {activity ? activity.topics : '…'}
+                  <td className="px-5 py-3 text-graphite">{experienceLabel(user.experienceLevel)}</td>
+                  <td className="whitespace-nowrap px-5 py-3 text-graphite">{formatDate(user.createdAt)}</td>
+                  <td className="figures px-5 py-3 text-right text-ink">
+                    {activity ? activity.topics.toLocaleString() : <span className="text-pencil">–</span>}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-5 py-3">
                     <SessionCountsText counts={activity?.tests} />
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-5 py-3">
                     <SessionCountsText counts={activity?.interviews} />
                   </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onOpen(user.id)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-fg transition-colors hover:bg-surface-hover"
-                    >
+                  <td className="px-5 py-3 text-right">
+                    <Button size="sm" onClick={() => onOpen(user.id)}>
                       View
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               )
@@ -190,38 +182,27 @@ function UsersTable({
         </table>
       </div>
 
-      <div className="flex flex-col gap-3 md:hidden">
+      <ul className="divide-y divide-rule rounded-lg border border-line bg-sheet md:hidden">
         {users.map((user) => {
           const activity = activityById.get(user.id)
           return (
-            <button
-              key={user.id}
-              type="button"
-              onClick={() => onOpen(user.id)}
-              className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 text-left transition-colors hover:bg-surface-hover"
-            >
-              <div className="flex w-full items-start justify-between gap-3">
+            <li key={user.id}>
+              <button
+                type="button"
+                onClick={() => onOpen(user.id)}
+                className="flex w-full items-start justify-between gap-4 px-4 py-3.5 text-left hover:bg-wash"
+              >
                 <UserName user={user} />
-                <span className="shrink-0 text-xs text-muted">{formatDate(user.createdAt)}</span>
-              </div>
-              <div className="grid w-full grid-cols-3 gap-2 text-sm">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Topics</p>
-                  <p className="font-semibold tabular-nums text-fg">{activity ? activity.topics : '…'}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Tests</p>
-                  <SessionCountsText counts={activity?.tests} />
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Interviews</p>
-                  <SessionCountsText counts={activity?.interviews} />
-                </div>
-              </div>
-            </button>
+                <span className="figures type-meta shrink-0 text-right">
+                  {activity
+                    ? `${activity.topics} topics · ${activity.tests.completed} tests · ${activity.interviews.completed} interviews`
+                    : '–'}
+                </span>
+              </button>
+            </li>
           )
         })}
-      </div>
+      </ul>
     </>
   )
 }
@@ -230,14 +211,10 @@ function UserName({ user }: { user: AdminUser }) {
   return (
     <div className="min-w-0">
       <div className="flex items-center gap-2">
-        <span className="truncate font-semibold text-fg">{user.displayName || user.email}</span>
-        {user.role === 'ADMIN' && (
-          <span className="shrink-0 rounded-full bg-primary-subtle px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
-            Admin
-          </span>
-        )}
+        <span className="truncate text-ink">{user.displayName || user.email}</span>
+        {user.role === 'ADMIN' && <StatusPill tone="neutral">Admin</StatusPill>}
       </div>
-      <div className="truncate text-xs text-muted">{user.email}</div>
+      <div className="type-meta truncate">{user.email}</div>
     </div>
   )
 }
